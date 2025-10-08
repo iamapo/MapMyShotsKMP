@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+    <dict>
+        <key>CADisableMinimumFrameDurationOnPhone</key>
+        <true/>
+
+        <key>NSPhotoLibraryUsageDescription</key>
+        <string>MapMyShot benötigt Zugriff auf deine Fotos, um sie anzuzeigen und zu analysieren.</string>
+
+        <key>NSPhotoLibraryAddUsageDescription</key>
+        <string>MapMyShot benötigt Zugriff, um Standortdaten in deinen Fotos zu speichern.</string>
+    </dict>
+</plist>
