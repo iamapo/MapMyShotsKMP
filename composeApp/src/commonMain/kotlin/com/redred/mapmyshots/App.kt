@@ -9,7 +9,7 @@ import com.redred.mapmyshots.ui.PhotoDetailsScreen
 import com.redred.mapmyshots.ui.PhotoListScreen
 
 @Composable
-fun AppRoot(
+fun App(
     onRequestPermissions: (() -> Unit)? = null,
     listScreen: @Composable ((Asset) -> Unit) -> Unit = { onOpen -> PhotoListScreen(onOpen) }
 ) {

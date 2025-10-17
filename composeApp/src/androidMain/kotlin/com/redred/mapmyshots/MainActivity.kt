@@ -30,7 +30,7 @@ class MainActivity : ComponentActivity() {
         setContent {
             MaterialTheme {
                 Surface {
-                    AppRoot(
+                    App(
                         onRequestPermissions = {
                             val perms = if (Build.VERSION.SDK_INT >= 33) arrayOf(
                                 Manifest.permission.READ_MEDIA_IMAGES
