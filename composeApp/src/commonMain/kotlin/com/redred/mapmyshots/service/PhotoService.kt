@@ -16,9 +16,16 @@ class PhotoService(
     @OptIn(ExperimentalTime::class)
     suspend fun loadPhotosPage(
         maxCount: Int
-    ): List<Asset> {
-        return repo.listAllImages(limitPerAlbum = maxCount)
-            .sortedByDescending { it.takenAt }
+    ): List<Asset> = coroutineScope {
+        val all = repo.listAllImages()
+        all.chunked(maxCount).flatMap { batch ->
+            batch.map { asset ->
+                async(Dispatchers.IO) {
+                    val hasLatLon = exif.getLatLon(asset) != null
+                    if (!hasLatLon) asset else null
+                }
+            }.awaitAll().filterNotNull()
+        }.sortedByDescending { it.takenAt }
     }
 
     @OptIn(ExperimentalTime::class)
