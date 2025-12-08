@@ -40,8 +40,8 @@ class AndroidPhotoRepository(private val context: Context): PhotoRepository {
             val addedCol = c.getColumnIndexOrThrow(MediaStore.Images.Media.DATE_ADDED)
 
             val out = mutableListOf<Asset>()
-            var row = 0
-            while (c.moveToNext()) {
+
+            while (c.moveToNext() && out.size < limitPerAlbum) {
                 val id = c.getLong(idCol)
                 val name = c.getString(nameCol)
                 val takenMs = c.getLong(takenCol)
@@ -55,7 +55,6 @@ class AndroidPhotoRepository(private val context: Context): PhotoRepository {
                     takenAt = Instant.fromEpochMilliseconds(if (ts > 0) ts else System.currentTimeMillis()),
                     uri = uri.toString()
                 )
-                row++
             }
             return out
         }

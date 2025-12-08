@@ -2,6 +2,8 @@ package com.redred.mapmyshots.platform
 
 import com.redred.mapmyshots.model.Asset
 import kotlinx.cinterop.ExperimentalForeignApi
+import kotlinx.cinterop.pointed
+import kotlinx.cinterop.value
 import platform.Foundation.NSDate
 import platform.Foundation.NSPredicate
 import platform.Foundation.NSSortDescriptor
@@ -15,35 +17,37 @@ import kotlin.time.Instant
 
 class IOSPhotoRepository : PhotoRepository {
 
-    @OptIn(ExperimentalTime::class, ExperimentalForeignApi::class)
+    @OptIn(ExperimentalForeignApi::class, ExperimentalTime::class)
     override suspend fun listAllImages(limitPerAlbum: Int): List<Asset> {
-        val options = PHFetchOptions().apply {
-            predicate = NSPredicate.predicateWithFormat(
-                "mediaType == %d",
-                PHAssetMediaTypeImage
-            )
+        val fetchResult = PHAsset.fetchAssetsWithMediaType(
+            mediaType = PHAssetMediaTypeImage,
+            options = null
+        )
 
-            sortDescriptors = listOf(
-                NSSortDescriptor(key = "creationDate", ascending = false)
-            )
-        }
-
-        val result = PHAsset.fetchAssetsWithOptions(options)
         val out = mutableListOf<Asset>()
 
-        result.enumerateObjectsUsingBlock { obj, _, _ ->
-            val phAsset = obj as PHAsset
-            val id = phAsset.localIdentifier
-            val date = phAsset.creationDate ?: NSDate()
-            val tsMillis = (date.timeIntervalSince1970 * 1000.0).toLong()
+        fetchResult.enumerateObjectsUsingBlock { obj, _, stop ->
+            val asset = obj as? PHAsset ?: return@enumerateObjectsUsingBlock
+
+            val id = asset.localIdentifier
+            val date: NSDate = asset.creationDate ?: NSDate()
+
+            val instant = Instant.fromEpochMilliseconds(
+                (date.timeIntervalSince1970 * 1000.0).toLong()
+            )
 
             out += Asset(
                 id = id,
-                displayName = id,
-                takenAt = Instant.fromEpochMilliseconds(tsMillis),
-                uri = id
+                displayName = "",
+                takenAt = instant,
+                uri = "ph://$id"
             )
+
+            if (out.size >= limitPerAlbum) {
+                stop?.let { it.pointed.value = true }
+            }
         }
+
         return out
     }
 

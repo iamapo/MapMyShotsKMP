@@ -10,6 +10,7 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import com.redred.mapmyshots.di.androidModule
+import com.redred.mapmyshots.di.sharedModule
 import org.koin.android.ext.koin.androidContext
 import org.koin.core.context.GlobalContext.startKoin
 
@@ -24,7 +25,8 @@ class MainActivity : ComponentActivity() {
 
         startKoin {
             androidContext(this@MainActivity)
-            modules(androidModule)
+            modules(androidModule, sharedModule
+            )
         }
 
         setContent {
