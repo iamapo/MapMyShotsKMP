@@ -45,7 +45,7 @@ kotlin {
             implementation(libs.koin.core)
             implementation(libs.koin.compose)
             implementation(libs.accompanist.flowlayout)
-
+            implementation(compose.materialIconsExtended)
 
         }
         commonTest.dependencies {

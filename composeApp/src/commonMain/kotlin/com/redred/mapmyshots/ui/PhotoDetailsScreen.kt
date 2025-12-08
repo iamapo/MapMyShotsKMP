@@ -15,10 +15,14 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.Card
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
@@ -28,6 +32,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.dp
@@ -40,10 +45,14 @@ import org.koin.core.parameter.parametersOf
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun PhotoDetailsScreen(photo: Asset, onSaved: () -> Unit) {
-
+fun PhotoDetailsScreen(
+    photo: Asset,
+    onSaved: () -> Unit,
+    onBack: () -> Unit
+) {
     val vm: PhotoDetailsViewModel = koinInject(parameters = { parametersOf(photo) })
 
+    val scope = rememberCoroutineScope()
 
     DisposableEffect(vm) {
         onDispose { vm.clear() }
@@ -54,9 +63,9 @@ fun PhotoDetailsScreen(photo: Asset, onSaved: () -> Unit) {
     val similar by vm.similar.collectAsState()
     val names by vm.locationNames.collectAsState()
 
-    LaunchedEffect(photo.id) { vm.loadSimilar() }
-
-    val scope = rememberCoroutineScope()
+    LaunchedEffect(photo.id) {
+        vm.loadSimilar()
+    }
 
     PhotoDetailsScreenContent(
         photo = photo,
@@ -70,7 +79,8 @@ fun PhotoDetailsScreen(photo: Asset, onSaved: () -> Unit) {
                 val ok = vm.applyLocationFrom(a)
                 if (ok) onSaved()
             }
-        }
+        },
+        onBack = onBack
     )
 }
 
@@ -83,30 +93,71 @@ internal fun PhotoDetailsScreenContent(
     similar: List<Asset>,
     names: Map<String, String>,
     onTimeRangeSelected: (String) -> Unit,
-    onAssetClicked: (Asset) -> Unit
+    onAssetClicked: (Asset) -> Unit,
+    onBack: () -> Unit
 ) {
-    Scaffold(topBar = { TopAppBar(title = { Text("Photo Details") }) }) { p ->
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { Text("Photo Details") },
+                navigationIcon = {
+                    IconButton(onClick = onBack) {
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = "Back"
+                        )
+                    }
+                }
+            )
+        }
+    ) { p ->
         Column(
             Modifier
                 .fillMaxSize()
                 .padding(p)
                 .padding(12.dp)
         ) {
-            Card(Modifier.fillMaxWidth().aspectRatio(1f)) {
+            // Hauptbild
+            Card(
+                Modifier
+                    .fillMaxWidth()
+                    .aspectRatio(1f)
+            ) {
                 val painter = rememberImagePainter(photo.uri)
-                Image(painter, null, contentScale = ContentScale.Crop)
+                Image(
+                    painter = painter,
+                    contentDescription = null,
+                    contentScale = ContentScale.Crop,
+                    modifier = Modifier.fillMaxSize()
+                )
             }
+
             Spacer(Modifier.height(12.dp))
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center) {
+
+            // Time-Range Auswahl
+            Row(
+                Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.Center
+            ) {
                 SegmentedButtons(
                     options = listOf("1 hour", "4 hours", "12 hours"),
                     selected = timeRange,
                     onSelected = onTimeRangeSelected
                 )
             }
+
             Spacer(Modifier.height(16.dp))
+
+            // Loading / Grid der ähnlichen Fotos
             if (loading) {
-                Box(Modifier.fillMaxWidth()) { CircularProgressIndicator() }
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(80.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    CircularProgressIndicator()
+                }
             } else {
                 LazyVerticalGrid(
                     columns = GridCells.Fixed(2),
@@ -121,14 +172,17 @@ internal fun PhotoDetailsScreenContent(
                             Column {
                                 val painter = rememberImagePainter(a.uri)
                                 Image(
-                                    painter,
-                                    null,
+                                    painter = painter,
+                                    contentDescription = null,
                                     modifier = Modifier
                                         .height(160.dp)
                                         .fillMaxWidth(),
                                     contentScale = ContentScale.Crop
                                 )
-                                Text(names[a.id] ?: "", modifier = Modifier.padding(8.dp))
+                                Text(
+                                    text = names[a.id] ?: "",
+                                    modifier = Modifier.padding(8.dp)
+                                )
                             }
                         }
                     }
@@ -139,10 +193,18 @@ internal fun PhotoDetailsScreenContent(
 }
 
 @Composable
-private fun SegmentedButtons(options: List<String>, selected: String, onSelected: (String) -> Unit) {
+private fun SegmentedButtons(
+    options: List<String>,
+    selected: String,
+    onSelected: (String) -> Unit
+) {
     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         options.forEach {
-            FilterChip(selected = it == selected, onClick = { onSelected(it) }, label = { Text(it) })
+            FilterChip(
+                selected = it == selected,
+                onClick = { onSelected(it) },
+                label = { Text(it) }
+            )
         }
     }
 }

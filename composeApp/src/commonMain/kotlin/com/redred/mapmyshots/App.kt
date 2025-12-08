@@ -19,7 +19,7 @@ fun App(
     if (current.value == null) {
         listScreen { asset -> current.value = asset }
     } else {
-        PhotoDetailsScreen(photo = current.value!!, onSaved = { current.value = null })
+        PhotoDetailsScreen(photo = current.value!!, onSaved = { current.value = null }, onBack = { current.value = null } )
     }
 
     //MaterialTheme {
