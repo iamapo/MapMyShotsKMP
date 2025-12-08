@@ -7,6 +7,7 @@ import com.redred.mapmyshots.service.SimilarityService
 import com.redred.mapmyshots.util.getTimeRangeDuration
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
@@ -17,7 +18,8 @@ class PhotoDetailsViewModel(
     private val sim: SimilarityService,
     private val geocoder: GeocoderPlatform,
 ) {
-    private val scope = CoroutineScope(Dispatchers.Default)
+    private val job = SupervisorJob()
+    private val scope = CoroutineScope(Dispatchers.Default + job)
 
     private val _timeRange = MutableStateFlow("1 hour")
     val timeRange: StateFlow<String> = _timeRange
@@ -31,6 +33,10 @@ class PhotoDetailsViewModel(
     private val _locationNames = MutableStateFlow<Map<String, String>>(emptyMap())
     val locationNames: StateFlow<Map<String, String>> = _locationNames
 
+    fun clear() {
+        job.cancel()
+    }
+
     fun setTimeRange(label: String) {
         _timeRange.value = label
         loadSimilar()
@@ -42,6 +48,7 @@ class PhotoDetailsViewModel(
             try {
                 val list = sim.findByTimeAndGps(photo, getTimeRangeDuration(_timeRange.value))
                 _similar.value = list
+
                 val names = mutableMapOf<String, String>()
                 for (a in list) {
                     names[a.id] = exif.getLocationName(a, geocoder)

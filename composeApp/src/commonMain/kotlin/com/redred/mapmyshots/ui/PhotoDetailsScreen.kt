@@ -23,6 +23,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -43,6 +44,11 @@ fun PhotoDetailsScreen(photo: Asset, onSaved: () -> Unit) {
 
     val vm: PhotoDetailsViewModel = koinInject(parameters = { parametersOf(photo) })
 
+
+    DisposableEffect(vm) {
+        onDispose { vm.clear() }
+    }
+
     val timeRange by vm.timeRange.collectAsState()
     val loading by vm.loading.collectAsState()
     val similar by vm.similar.collectAsState()
@@ -52,8 +58,40 @@ fun PhotoDetailsScreen(photo: Asset, onSaved: () -> Unit) {
 
     val scope = rememberCoroutineScope()
 
+    PhotoDetailsScreenContent(
+        photo = photo,
+        timeRange = timeRange,
+        loading = loading,
+        similar = similar,
+        names = names,
+        onTimeRangeSelected = vm::setTimeRange,
+        onAssetClicked = { a ->
+            scope.launch {
+                val ok = vm.applyLocationFrom(a)
+                if (ok) onSaved()
+            }
+        }
+    )
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+internal fun PhotoDetailsScreenContent(
+    photo: Asset,
+    timeRange: String,
+    loading: Boolean,
+    similar: List<Asset>,
+    names: Map<String, String>,
+    onTimeRangeSelected: (String) -> Unit,
+    onAssetClicked: (Asset) -> Unit
+) {
     Scaffold(topBar = { TopAppBar(title = { Text("Photo Details") }) }) { p ->
-        Column(Modifier.fillMaxSize().padding(p).padding(12.dp)) {
+        Column(
+            Modifier
+                .fillMaxSize()
+                .padding(p)
+                .padding(12.dp)
+        ) {
             Card(Modifier.fillMaxWidth().aspectRatio(1f)) {
                 val painter = rememberImagePainter(photo.uri)
                 Image(painter, null, contentScale = ContentScale.Crop)
@@ -61,25 +99,35 @@ fun PhotoDetailsScreen(photo: Asset, onSaved: () -> Unit) {
             Spacer(Modifier.height(12.dp))
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center) {
                 SegmentedButtons(
-                    options = listOf("1 hour","4 hours","12 hours"),
+                    options = listOf("1 hour", "4 hours", "12 hours"),
                     selected = timeRange,
-                    onSelected = vm::setTimeRange
+                    onSelected = onTimeRangeSelected
                 )
             }
             Spacer(Modifier.height(16.dp))
-            if (loading) Box(Modifier.fillMaxWidth()) { CircularProgressIndicator() }
-            else {
-                LazyVerticalGrid(columns = GridCells.Fixed(2), verticalArrangement = Arrangement.spacedBy(10.dp), horizontalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.weight(1f)) {
+            if (loading) {
+                Box(Modifier.fillMaxWidth()) { CircularProgressIndicator() }
+            } else {
+                LazyVerticalGrid(
+                    columns = GridCells.Fixed(2),
+                    verticalArrangement = Arrangement.spacedBy(10.dp),
+                    horizontalArrangement = Arrangement.spacedBy(10.dp),
+                    modifier = Modifier.weight(1f)
+                ) {
                     items(similar, key = { it.id }) { a ->
-                        Card(Modifier.clickable {
-                            scope.launch {
-                                val ok = vm.applyLocationFrom(a)
-                                if (ok) onSaved()
-                            }
-                        }) {
+                        Card(
+                            Modifier.clickable { onAssetClicked(a) }
+                        ) {
                             Column {
                                 val painter = rememberImagePainter(a.uri)
-                                Image(painter, null, modifier = Modifier.height(160.dp).fillMaxWidth(), contentScale = ContentScale.Crop)
+                                Image(
+                                    painter,
+                                    null,
+                                    modifier = Modifier
+                                        .height(160.dp)
+                                        .fillMaxWidth(),
+                                    contentScale = ContentScale.Crop
+                                )
                                 Text(names[a.id] ?: "", modifier = Modifier.padding(8.dp))
                             }
                         }

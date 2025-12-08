@@ -21,4 +21,8 @@ fun App(
     } else {
         PhotoDetailsScreen(photo = current.value!!, onSaved = { current.value = null })
     }
+
+    //MaterialTheme {
+    //   Text("Hallo, MapMyShots läuft 🎉")
+    //}
 }
