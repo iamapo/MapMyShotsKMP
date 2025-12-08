@@ -12,7 +12,8 @@ fun PhotoListScreenLoadingPreview() {
     PhotoListScreenContent(
         isLoading = true,
         grouped = emptyMap(),
-        onOpen = {}
+        onOpen = {},
+        onLoadMore = {}
     )
 }
 
@@ -33,6 +34,7 @@ fun PhotoListScreenWithDataPreview() {
     PhotoListScreenContent(
         isLoading = false,
         grouped = grouped,
-        onOpen = {}
+        onOpen = {},
+        onLoadMore = {}
     )
 }

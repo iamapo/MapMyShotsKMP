@@ -19,33 +19,32 @@ class IOSPhotoRepository : PhotoRepository {
 
     @OptIn(ExperimentalForeignApi::class, ExperimentalTime::class)
     override suspend fun listAllImages(limitPerAlbum: Int): List<Asset> {
+        val options = PHFetchOptions().apply {
+            sortDescriptors = listOf(
+                NSSortDescriptor(key = "creationDate", ascending = false)
+            )
+        }
+
         val fetchResult = PHAsset.fetchAssetsWithMediaType(
             mediaType = PHAssetMediaTypeImage,
-            options = null
+            options = options
         )
 
         val out = mutableListOf<Asset>()
 
-        fetchResult.enumerateObjectsUsingBlock { obj, _, stop ->
+        fetchResult.enumerateObjectsUsingBlock { obj, _, _ ->
             val asset = obj as? PHAsset ?: return@enumerateObjectsUsingBlock
 
             val id = asset.localIdentifier
-            val date: NSDate = asset.creationDate ?: NSDate()
-
-            val instant = Instant.fromEpochMilliseconds(
-                (date.timeIntervalSince1970 * 1000.0).toLong()
-            )
+            val date = asset.creationDate ?: NSDate()
+            val tsMillis = (date.timeIntervalSince1970 * 1000.0).toLong()
 
             out += Asset(
                 id = id,
                 displayName = "",
-                takenAt = instant,
+                takenAt = Instant.fromEpochMilliseconds(tsMillis),
                 uri = "ph://$id"
             )
-
-            if (out.size >= limitPerAlbum) {
-                stop?.let { it.pointed.value = true }
-            }
         }
 
         return out

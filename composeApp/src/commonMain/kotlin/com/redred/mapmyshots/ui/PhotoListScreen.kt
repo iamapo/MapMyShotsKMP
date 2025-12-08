@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
@@ -17,11 +18,14 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.redred.mapmyshots.model.Asset
 import com.redred.mapmyshots.viewmodel.PhotoListViewModel
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.filterNotNull
 import org.koin.compose.koinInject
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -32,7 +36,7 @@ fun PhotoListScreen(onOpen: (Asset) -> Unit, vm: PhotoListViewModel = koinInject
         onDispose { vm.clear() }
     }
 
-    LaunchedEffect(Unit) { vm.load() }
+    LaunchedEffect(Unit) { vm.loadFirstPage() }
 
     val isLoading by vm.isLoading.collectAsState()
     val grouped = if (isLoading) emptyMap() else vm.groupedByMonth()
@@ -40,7 +44,8 @@ fun PhotoListScreen(onOpen: (Asset) -> Unit, vm: PhotoListViewModel = koinInject
     PhotoListScreenContent(
         isLoading = isLoading,
         grouped = grouped,
-        onOpen = onOpen
+        onOpen = onOpen,
+        onLoadMore = { vm.loadNextPage() }
     )
 }
 
@@ -49,30 +54,49 @@ fun PhotoListScreen(onOpen: (Asset) -> Unit, vm: PhotoListViewModel = koinInject
 internal fun PhotoListScreenContent(
     isLoading: Boolean,
     grouped: Map<String, List<Asset>>,
-    onOpen: (Asset) -> Unit
+    onOpen: (Asset) -> Unit,
+    onLoadMore: () -> Unit
 ) {
-    Scaffold(topBar = { TopAppBar(title = { Text("MapMyShot") }) }) { p ->
-        if (isLoading) {
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(p),
-                contentAlignment = Alignment.Center
-            ) {
-                CircularProgressIndicator(
-                    modifier = Modifier.size(64.dp),
-                    color = MaterialTheme.colorScheme.secondary
-                )
+    val listState = rememberLazyListState()
+
+    LaunchedEffect(listState, grouped) {
+        snapshotFlow {
+            listState.layoutInfo.visibleItemsInfo.lastOrNull()?.index
+        }
+            .filterNotNull()
+            .distinctUntilChanged()
+            .collect { lastVisible ->
+                val totalItems = grouped.size
+                if (!isLoading && totalItems > 0 && lastVisible >= totalItems - 2) {
+                    onLoadMore()
+                }
             }
-        } else {
-            LazyColumn(
-                Modifier
-                    .fillMaxSize()
-                    .padding(p)
-                    .padding(12.dp)
-            ) {
-                items(grouped.entries.toList(), key = { it.key }) { e ->
-                    MonthGrid(month = e.key, photos = e.value, onTap = onOpen)
+    }
+    Scaffold(topBar = { TopAppBar(title = { Text("MapMyShot") }) }) { p ->
+        LazyColumn(
+            state = listState,
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(p)
+                .padding(12.dp)
+        ) {
+            items(grouped.entries.toList(), key = { it.key }) { e ->
+                MonthGrid(month = e.key, photos = e.value, onTap = onOpen)
+            }
+
+            if (isLoading && grouped.isNotEmpty()) {
+                item {
+                    Box(
+                        Modifier
+                            .fillMaxSize()
+                            .padding(16.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(32.dp),
+                            color = MaterialTheme.colorScheme.secondary
+                        )
+                    }
                 }
             }
         }

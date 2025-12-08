@@ -14,6 +14,14 @@ class PhotoService(
     private val exif: ExifService) {
 
     @OptIn(ExperimentalTime::class)
+    suspend fun loadPhotosPage(
+        maxCount: Int
+    ): List<Asset> {
+        return repo.listAllImages(limitPerAlbum = maxCount)
+            .sortedByDescending { it.takenAt }
+    }
+
+    @OptIn(ExperimentalTime::class)
     suspend fun loadPhotosWithoutLocation(
         maxPerAlbum: Int = 20,
         batchSize: Int = 24
