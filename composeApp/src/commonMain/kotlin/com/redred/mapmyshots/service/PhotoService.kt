@@ -11,36 +11,67 @@ import kotlin.time.ExperimentalTime
 
 class PhotoService(
     private val repo: PhotoRepository,
-    private val exif: ExifService) {
+    private val exif: ExifService
+) {
+
+    // Cache: welche Assets haben KEINE Location / welche schon
+    private val noLocation = mutableSetOf<String>()
+    private val withLocation = mutableSetOf<String>()
+
+    // Einmal geladene, sortierte Liste aller Assets
+    private var allSorted: List<Asset>? = null
 
     @OptIn(ExperimentalTime::class)
-    suspend fun loadPhotosPage(
-        maxCount: Int
-    ): List<Asset> = coroutineScope {
+    private suspend fun ensureAllSorted(): List<Asset> {
+        val cached = allSorted
+        if (cached != null) return cached
+
         val all = repo.listAllImages()
-        all.chunked(maxCount).flatMap { batch ->
-            batch.map { asset ->
-                async(Dispatchers.IO) {
-                    val hasLatLon = exif.getLatLon(asset) != null
-                    if (!hasLatLon) asset else null
-                }
-            }.awaitAll().filterNotNull()
-        }.sortedByDescending { it.takenAt }
+            .sortedByDescending { it.takenAt }
+        allSorted = all
+        return all
     }
 
+    /**
+     * Liefert eine "Page" von Assets OHNE Location.
+     * pagingOffset = wie viele Assets im Gesamtdatensatz bereits "verbraucht" wurden
+     * pageSize = wie viele neue Assets aus dem Gesamtdatensatz maximal inspizieren
+     */
     @OptIn(ExperimentalTime::class)
-    suspend fun loadPhotosWithoutLocation(
-        maxPerAlbum: Int = 20,
-        batchSize: Int = 24
+    suspend fun loadPhotosPage(
+        pagingOffset: Int,
+        pageSize: Int
     ): List<Asset> = coroutineScope {
-        val all = repo.listAllImages(maxPerAlbum)
-        all.chunked(batchSize).flatMap { batch ->
-            batch.map { asset ->
-                async(Dispatchers.IO) {
-                    val hasLatLon = exif.getLatLon(asset) != null
-                    if (!hasLatLon) asset else null
+        val all = ensureAllSorted()
+
+        if (pagingOffset >= all.size) return@coroutineScope emptyList()
+
+        val slice = all
+            .drop(pagingOffset)
+            .take(pageSize)
+
+        slice.map { asset ->
+            async(Dispatchers.IO) {
+                val id = asset.id
+
+                // Cache-Hit?
+                when {
+                    withLocation.contains(id) -> null
+                    noLocation.contains(id) -> asset
+                    else -> {
+                        val hasLatLon = exif.getLatLon(asset) != null
+                        if (hasLatLon) {
+                            withLocation += id
+                            null
+                        } else {
+                            noLocation += id
+                            asset
+                        }
+                    }
                 }
-            }.awaitAll().filterNotNull()
-        }.sortedByDescending { it.takenAt }
+            }
+        }.awaitAll()
+            .filterNotNull()
+        // slice ist schon sortiert, sortieren wäre eigentlich nicht mehr nötig
     }
 }
