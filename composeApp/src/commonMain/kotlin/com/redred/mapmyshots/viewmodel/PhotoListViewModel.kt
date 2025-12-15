@@ -2,7 +2,6 @@ package com.redred.mapmyshots.viewmodel
 
 import com.redred.mapmyshots.model.Asset
 import com.redred.mapmyshots.service.PhotoService
-import com.redred.mapmyshots.util.groupByMonth
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -37,18 +36,22 @@ class PhotoListViewModel(private val service: PhotoService) {
     private val _photos = MutableStateFlow<List<Asset>>(emptyList())
     val photos: StateFlow<List<Asset>> = _photos
 
-    private val pageSize = 50
-    private var currentMax = pageSize
+    private val candidatePageSize = 200
+    private var candidateOffset = 0
     private var endReached = false
 
-    fun clear() {
-        job.cancel()
-    }
+    private var scannedTotal = 0
+    private var foundTotal = 0
+
+    fun clear() = job.cancel()
 
     fun loadFirstPage() {
         if (_photos.value.isNotEmpty()) return
-        currentMax = pageSize
+        candidateOffset = 0
         endReached = false
+        scannedTotal = 0
+        foundTotal = 0
+        _photos.value = emptyList()
         loadInternal(reset = true)
     }
 
@@ -60,22 +63,30 @@ class PhotoListViewModel(private val service: PhotoService) {
     private fun loadInternal(reset: Boolean) {
         scope.launch {
             if (reset) _isLoading.value = true else _isLoadingMore.value = true
-            _progress.value = LoadProgress(active = true, scanned = 0, total = 0, found = 0)
+            _progress.value = LoadProgress(active = true, scanned = scannedTotal, total = scannedTotal, found = foundTotal)
 
             try {
-                val result = service.loadPhotosPage(
-                    maxCount = currentMax,
+                val delta = service.loadNextChunkWithoutLocation(
+                    offset = candidateOffset,
+                    candidateLimit = candidatePageSize,
                     batchSize = 24
-                ) { scanned, total, found ->
-                    _progress.value = LoadProgress(active = true, scanned = scanned, total = total, found = found)
+                ) { scannedInChunk, chunkTotal, foundInChunk ->
+                    _progress.value = LoadProgress(
+                        active = true,
+                        scanned = scannedTotal + scannedInChunk,
+                        total = scannedTotal + chunkTotal,
+                        found = foundTotal + foundInChunk
+                    )
                 }
 
-                // Ende nur, wenn repo weniger Kandidaten liefern kann als angefragt
-                if (result.candidateCount < currentMax) {
-                    endReached = true
-                }
+                candidateOffset += delta.scannedInChunk
+                scannedTotal += delta.scannedInChunk
+                foundTotal += delta.foundInChunk
+                endReached = delta.endReached
 
-                _photos.value = result.items
+                if (delta.newHits.isNotEmpty()) {
+                    _photos.value += delta.newHits
+                }
             } finally {
                 _isLoading.value = false
                 _isLoadingMore.value = false
@@ -83,6 +94,4 @@ class PhotoListViewModel(private val service: PhotoService) {
             }
         }
     }
-
-    fun groupedByMonth() = groupByMonth(_photos.value)
 }

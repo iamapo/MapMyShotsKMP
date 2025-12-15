@@ -9,58 +9,58 @@ import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
 import kotlin.time.ExperimentalTime
 
-data class PhotoPageResult(
-    val items: List<Asset>,
-    val candidateCount: Int
+
+data class PhotoPageDelta(
+    val newHits: List<Asset>,
+    val scannedInChunk: Int,
+    val foundInChunk: Int,
+    val endReached: Boolean
 )
 
 class PhotoService(
     private val repo: PhotoRepository,
     private val exif: ExifService
 ) {
-    /**
-     * Lädt maxCount neueste Photos und filtert jene OHNE Location.
-     * Progress zeigt:
-     * - scanned: wie viele Kandidaten geprüft wurden
-     * - total: wie viele Kandidaten insgesamt geprüft werden (<= maxCount)
-     * - found: wie viele ohne Location bisher gefunden wurden
-     */
-    @OptIn(ExperimentalTime::class)
-    suspend fun loadPhotosPage(
-        maxCount: Int,
-        batchSize: Int = 24,
-        onProgress: (scanned: Int, total: Int, found: Int) -> Unit = { _, _, _ -> }
-    ): PhotoPageResult = coroutineScope {
 
-        val candidates = repo.listAllImages(limitPerAlbum = maxCount).take(maxCount)
-        val total = candidates.size
+    @OptIn(ExperimentalTime::class)
+    suspend fun loadNextChunkWithoutLocation(
+        offset: Int,
+        candidateLimit: Int,
+        batchSize: Int = 24,
+        onProgress: (scannedInChunk: Int, chunkTotal: Int, foundInChunk: Int) -> Unit = { _, _, _ -> }
+    ): PhotoPageDelta = coroutineScope {
+
+        val page = repo.listImagesPage(offset = offset, limit = candidateLimit)
+        val candidates = page.items
+        val chunkTotal = candidates.size
 
         var scanned = 0
         var found = 0
-        onProgress(scanned, total, found)
+        onProgress(scanned, chunkTotal, found)
 
-        val withoutLocation = candidates
+        val hits = candidates
             .chunked(batchSize)
             .flatMap { batch ->
-                val batchResults: List<Asset?> = batch.map { asset ->
+                val res = batch.map { asset ->
                     async(Dispatchers.IO) {
                         val hasLatLon = exif.getLatLon(asset) != null
                         if (!hasLatLon) asset else null
                     }
                 }.awaitAll()
 
-                val hits = batchResults.filterNotNull()
-                found += hits.size
+                val batchHits = res.filterNotNull()
+                found += batchHits.size
                 scanned += batch.size
-                onProgress(scanned, total, found)
+                onProgress(scanned, chunkTotal, found)
 
-                hits
+                batchHits
             }
-            .sortedByDescending { it.takenAt }
 
-        PhotoPageResult(
-            items = withoutLocation,
-            candidateCount = total
+        PhotoPageDelta(
+            newHits = hits,                 // KEIN sort nötig: Kandidaten kommen schon newest-first, wir behalten Order
+            scannedInChunk = chunkTotal,
+            foundInChunk = found,
+            endReached = page.endReached
         )
     }
 }

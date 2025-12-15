@@ -4,7 +4,13 @@ import com.redred.mapmyshots.model.Asset
 import kotlin.time.ExperimentalTime
 import kotlin.time.Instant
 
+data class AssetPage(
+    val items: List<Asset>,
+    val endReached: Boolean
+)
+
 interface PhotoRepository {
+    suspend fun listImagesPage(offset: Int, limit: Int): AssetPage
     suspend fun listAllImages(limitPerAlbum: Int = 0): List<Asset>
     @OptIn(ExperimentalTime::class)
     suspend fun listImagesBetween(min: Instant, max: Instant): List<Asset>

@@ -1,5 +1,6 @@
 package com.redred.mapmyshots.ui
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
@@ -13,17 +14,21 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import com.redred.mapmyshots.model.Asset
+import com.redred.mapmyshots.util.groupByMonth
 import com.redred.mapmyshots.viewmodel.PhotoListViewModel
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
@@ -42,7 +47,8 @@ fun PhotoListScreen(
     val isLoadingMore by vm.isLoadingMore.collectAsState()
     val progress by vm.progress.collectAsState()
 
-    val grouped = if (isLoading && vm.photos.value.isEmpty()) emptyMap() else vm.groupedByMonth()
+    val photos by vm.photos.collectAsState()
+    val grouped = if (isLoading && photos.isEmpty()) emptyMap() else groupByMonth(photos)
 
     PhotoListScreenContent(
         isLoading = isLoading,
@@ -66,8 +72,10 @@ internal fun PhotoListScreenContent(
 ) {
     val listState = rememberLazyListState()
 
-    // robuster Load-more Trigger: basiert auf totalItemsCount der LazyColumn
-    LaunchedEffect(listState, grouped, isLoading, isLoadingMore) {
+    val latestLoading by rememberUpdatedState(isLoading)
+    val latestLoadingMore by rememberUpdatedState(isLoadingMore)
+
+    LaunchedEffect(listState) {
         snapshotFlow { listState.layoutInfo }
             .map { info ->
                 val last = info.visibleItemsInfo.lastOrNull()?.index ?: 0
@@ -75,71 +83,71 @@ internal fun PhotoListScreenContent(
             }
             .distinctUntilChanged()
             .collect { (lastVisible, totalItems) ->
-                if (!isLoading && !isLoadingMore && totalItems > 0 && lastVisible >= totalItems - 2) {
+                if (!latestLoading && !latestLoadingMore && totalItems > 0 && lastVisible >= totalItems - 2) {
                     onLoadMore()
                 }
             }
     }
+    Surface(
+        modifier = Modifier.fillMaxSize(),
+        color = Color.White
+    ) {
 
-    Scaffold { p ->
-        Column(
-            Modifier
-                .fillMaxSize()
-                .padding(p)
-        ) {
-            Text(
-                text = "Analysiere ${progress.scanned}/${progress.total} · Treffer: ${progress.found}",
-                style = MaterialTheme.typography.labelMedium,
-                modifier = Modifier.padding(top = 6.dp)
-            )
-            // Kleine Progress-Anzeige oben (nur wenn aktiv)
-            if (progress.active && progress.total > 0) {
-                Column(
-                    Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 12.dp, vertical = 8.dp)
-                ) {
-                    LinearProgressIndicator(
-                        progress = { progress.fraction },
-                        modifier = Modifier.fillMaxWidth()
-                    )
-                    Text(
-                        text = "Analysiere ${progress.scanned}/${progress.total} …",
-                        style = MaterialTheme.typography.labelMedium,
-                        modifier = Modifier.padding(top = 6.dp)
-                    )
-                }
-            }
+        Scaffold(
+            containerColor = Color.White,
+            bottomBar = {
+                Surface(tonalElevation = 2.dp,
+                    color = Color.White) {
+                    Column(
 
-            // Initial: Vollbild-Feedback (wenn wirklich noch nichts da ist)
-            if (isLoading && grouped.isEmpty()) {
-                Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    CircularProgressIndicator(modifier = Modifier.size(40.dp))
-                }
-                return@Scaffold
-            }
-
-            LazyColumn(
-                state = listState,
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(horizontal = 12.dp)
-            ) {
-                grouped.entries.forEach { e ->
-                    item(key = e.key) {
-                        MonthGrid(month = e.key, photos = e.value, onTap = onOpen)
+                        Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 12.dp, vertical = 8.dp)
+                    ) {
+                        Text(
+                            text = "Treffer: ${progress.found} …",
+                            style = MaterialTheme.typography.labelMedium,
+                            modifier = Modifier.padding(top = 6.dp)
+                        )
                     }
                 }
+            }
+        ) { p ->
+            Column(
+                Modifier
+                    .fillMaxSize()
+                    .padding(p)
+            ) {
 
-                if (isLoadingMore) {
-                    item(key = "loading_more") {
-                        Box(
-                            Modifier
-                                .fillMaxWidth()
-                                .padding(16.dp),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            CircularProgressIndicator(modifier = Modifier.size(28.dp))
+                if (isLoading && grouped.isEmpty()) {
+                    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                        CircularProgressIndicator(modifier = Modifier.size(40.dp))
+                    }
+                    return@Scaffold
+                }
+
+                LazyColumn(
+                    state = listState,
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(horizontal = 12.dp)
+                ) {
+                    grouped.entries.forEach { e ->
+                        item(key = e.key) {
+                            MonthGrid(month = e.key, photos = e.value, onTap = onOpen)
+                        }
+                    }
+
+                    if (isLoadingMore) {
+                        item(key = "loading_more") {
+                            Box(
+                                Modifier
+                                    .fillMaxWidth()
+                                    .padding(16.dp),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                CircularProgressIndicator(modifier = Modifier.size(28.dp))
+                            }
                         }
                     }
                 }

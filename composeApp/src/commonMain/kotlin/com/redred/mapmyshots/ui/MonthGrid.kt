@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.key
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.unit.Dp
@@ -42,13 +43,15 @@ fun MonthGrid(
                 verticalArrangement = Arrangement.spacedBy(spacing)
             ) {
                 photos.forEach { a ->
-                    AssetThumbnail(
-                        asset = a,
-                        modifier = Modifier
-                            .size(cell)
-                            .clip(RoundedCornerShape(12.dp))
-                            .clickable { onTap(a) }
-                    )
+                    key(a.id) {
+                        AssetThumbnail(
+                            asset = a,
+                            modifier = Modifier
+                                .size(cell)
+                                .clip(RoundedCornerShape(12.dp))
+                                .clickable { onTap(a) }
+                        )
+                    }
                 }
             }
         }

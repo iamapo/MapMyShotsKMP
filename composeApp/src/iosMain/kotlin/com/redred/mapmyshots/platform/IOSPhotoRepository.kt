@@ -97,4 +97,51 @@ class IOSPhotoRepository : PhotoRepository {
 
         return out
     }
+
+    @OptIn(ExperimentalForeignApi::class, ExperimentalTime::class)
+    override suspend fun listImagesPage(offset: Int, limit: Int): AssetPage {
+        val options = PHFetchOptions().apply {
+            sortDescriptors = listOf(NSSortDescriptor(key = "creationDate", ascending = false))
+            if (limit > 0) {
+                // wir fetchten nur "offset + limit" viele neueste Assets und schneiden dann auf die Page zu
+                try {
+                    fetchLimit = (offset + limit).toULong()
+                } catch (_: Throwable) { /* ignore */ }
+            }
+        }
+
+        val fetchResult = PHAsset.fetchAssetsWithMediaType(
+            mediaType = PHAssetMediaTypeImage,
+            options = options
+        )
+
+        val out = mutableListOf<Asset>()
+        var index = 0
+
+        fetchResult.enumerateObjectsUsingBlock { obj, _, stop ->
+            val asset = obj as? PHAsset ?: return@enumerateObjectsUsingBlock
+
+            if (index >= offset && out.size < limit) {
+                val id = asset.localIdentifier
+                val date = asset.creationDate ?: NSDate()
+                val tsMillis = (date.timeIntervalSince1970 * 1000.0).toLong()
+
+                out += Asset(
+                    id = id,
+                    displayName = "",
+                    takenAt = Instant.fromEpochMilliseconds(tsMillis),
+                    uri = "ph://$id"
+                )
+            }
+
+            index += 1
+
+            if (out.size >= limit) {
+                stop?.pointed?.value = true
+            }
+        }
+
+        val endReached = out.size < limit
+        return AssetPage(items = out, endReached = endReached)
+    }
 }
