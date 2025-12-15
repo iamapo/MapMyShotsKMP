@@ -54,7 +54,6 @@ class PhotoListViewModel(private val service: PhotoService) {
 
     fun loadNextPage() {
         if (_isLoadingMore.value || _isLoading.value || endReached) return
-        currentMax += pageSize
         loadInternal(reset = false)
     }
 
