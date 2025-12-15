@@ -5,7 +5,7 @@ import kotlin.time.ExperimentalTime
 import kotlin.time.Instant
 
 interface PhotoRepository {
-    suspend fun listAllImages(limitPerAlbum: Int = 20): List<Asset>
+    suspend fun listAllImages(limitPerAlbum: Int = 0): List<Asset>
     @OptIn(ExperimentalTime::class)
     suspend fun listImagesBetween(min: Instant, max: Instant): List<Asset>
 }

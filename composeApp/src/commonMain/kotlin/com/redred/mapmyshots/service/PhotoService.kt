@@ -9,38 +9,58 @@ import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
 import kotlin.time.ExperimentalTime
 
+data class PhotoPageResult(
+    val items: List<Asset>,
+    val candidateCount: Int
+)
+
 class PhotoService(
     private val repo: PhotoRepository,
-    private val exif: ExifService) {
-
+    private val exif: ExifService
+) {
+    /**
+     * Lädt maxCount neueste Photos und filtert jene OHNE Location.
+     * Progress zeigt:
+     * - scanned: wie viele Kandidaten geprüft wurden
+     * - total: wie viele Kandidaten insgesamt geprüft werden (<= maxCount)
+     * - found: wie viele ohne Location bisher gefunden wurden
+     */
     @OptIn(ExperimentalTime::class)
     suspend fun loadPhotosPage(
-        maxCount: Int
-    ): List<Asset> = coroutineScope {
-        val all = repo.listAllImages()
-        all.chunked(maxCount).flatMap { batch ->
-            batch.map { asset ->
-                async(Dispatchers.IO) {
-                    val hasLatLon = exif.getLatLon(asset) != null
-                    if (!hasLatLon) asset else null
-                }
-            }.awaitAll().filterNotNull()
-        }.sortedByDescending { it.takenAt }
-    }
+        maxCount: Int,
+        batchSize: Int = 24,
+        onProgress: (scanned: Int, total: Int, found: Int) -> Unit = { _, _, _ -> }
+    ): PhotoPageResult = coroutineScope {
 
-    @OptIn(ExperimentalTime::class)
-    suspend fun loadPhotosWithoutLocation(
-        maxPerAlbum: Int = 20,
-        batchSize: Int = 24
-    ): List<Asset> = coroutineScope {
-        val all = repo.listAllImages(maxPerAlbum)
-        all.chunked(batchSize).flatMap { batch ->
-            batch.map { asset ->
-                async(Dispatchers.IO) {
-                    val hasLatLon = exif.getLatLon(asset) != null
-                    if (!hasLatLon) asset else null
-                }
-            }.awaitAll().filterNotNull()
-        }.sortedByDescending { it.takenAt }
+        val candidates = repo.listAllImages(limitPerAlbum = maxCount).take(maxCount)
+        val total = candidates.size
+
+        var scanned = 0
+        var found = 0
+        onProgress(scanned, total, found)
+
+        val withoutLocation = candidates
+            .chunked(batchSize)
+            .flatMap { batch ->
+                val batchResults: List<Asset?> = batch.map { asset ->
+                    async(Dispatchers.IO) {
+                        val hasLatLon = exif.getLatLon(asset) != null
+                        if (!hasLatLon) asset else null
+                    }
+                }.awaitAll()
+
+                val hits = batchResults.filterNotNull()
+                found += hits.size
+                scanned += batch.size
+                onProgress(scanned, total, found)
+
+                hits
+            }
+            .sortedByDescending { it.takenAt }
+
+        PhotoPageResult(
+            items = withoutLocation,
+            candidateCount = total
+        )
     }
 }

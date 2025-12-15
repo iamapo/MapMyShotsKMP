@@ -20,9 +20,16 @@ class IOSPhotoRepository : PhotoRepository {
     @OptIn(ExperimentalForeignApi::class, ExperimentalTime::class)
     override suspend fun listAllImages(limitPerAlbum: Int): List<Asset> {
         val options = PHFetchOptions().apply {
-            sortDescriptors = listOf(
-                NSSortDescriptor(key = "creationDate", ascending = false)
-            )
+            sortDescriptors = listOf(NSSortDescriptor(key = "creationDate", ascending = false))
+
+            // iOS kann direkt limitieren (Binding kann Int oder ULong erwarten, je nach Version)
+            if (limitPerAlbum > 0) {
+                try {
+                    fetchLimit = limitPerAlbum.toULong()
+                } catch (_: Throwable) {
+                    // falls dein Binding fetchLimit als Long/Int hat, ggf. anpassen
+                }
+            }
         }
 
         val fetchResult = PHAsset.fetchAssetsWithMediaType(
@@ -32,7 +39,7 @@ class IOSPhotoRepository : PhotoRepository {
 
         val out = mutableListOf<Asset>()
 
-        fetchResult.enumerateObjectsUsingBlock { obj, _, _ ->
+        fetchResult.enumerateObjectsUsingBlock { obj, _, stop ->
             val asset = obj as? PHAsset ?: return@enumerateObjectsUsingBlock
 
             val id = asset.localIdentifier
@@ -45,6 +52,11 @@ class IOSPhotoRepository : PhotoRepository {
                 takenAt = Instant.fromEpochMilliseconds(tsMillis),
                 uri = "ph://$id"
             )
+
+            // Zusätzliches frühes Abbrechen, falls fetchLimit bei dir nicht greift:
+            if (limitPerAlbum > 0 && out.size >= limitPerAlbum) {
+                stop?.pointed?.value = true
+            }
         }
 
         return out
@@ -52,12 +64,8 @@ class IOSPhotoRepository : PhotoRepository {
 
     @OptIn(ExperimentalTime::class, ExperimentalForeignApi::class)
     override suspend fun listImagesBetween(min: Instant, max: Instant): List<Asset> {
-        val minDate = NSDate.dateWithTimeIntervalSince1970(
-            min.toEpochMilliseconds().toDouble() / 1000.0
-        )
-        val maxDate = NSDate.dateWithTimeIntervalSince1970(
-            max.toEpochMilliseconds().toDouble() / 1000.0
-        )
+        val minDate = NSDate.dateWithTimeIntervalSince1970(min.toEpochMilliseconds().toDouble() / 1000.0)
+        val maxDate = NSDate.dateWithTimeIntervalSince1970(max.toEpochMilliseconds().toDouble() / 1000.0)
 
         val options = PHFetchOptions().apply {
             predicate = NSPredicate.predicateWithFormat(
@@ -66,17 +74,15 @@ class IOSPhotoRepository : PhotoRepository {
                 minDate,
                 maxDate
             )
-
-            sortDescriptors = listOf(
-                NSSortDescriptor(key = "creationDate", ascending = false)
-            )
+            sortDescriptors = listOf(NSSortDescriptor(key = "creationDate", ascending = false))
         }
 
         val result = PHAsset.fetchAssetsWithOptions(options)
         val out = mutableListOf<Asset>()
 
         result.enumerateObjectsUsingBlock { obj, _, _ ->
-            val phAsset = obj as PHAsset
+            val phAsset = obj as? PHAsset ?: return@enumerateObjectsUsingBlock
+
             val id = phAsset.localIdentifier
             val date = phAsset.creationDate ?: NSDate()
             val tsMillis = (date.timeIntervalSince1970 * 1000.0).toLong()
@@ -85,9 +91,10 @@ class IOSPhotoRepository : PhotoRepository {
                 id = id,
                 displayName = id,
                 takenAt = Instant.fromEpochMilliseconds(tsMillis),
-                uri = id
+                uri = "ph://$id"
             )
         }
+
         return out
     }
 }
