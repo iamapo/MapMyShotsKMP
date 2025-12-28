@@ -24,6 +24,7 @@ import platform.Photos.PHAsset
 import platform.Photos.PHImageContentModeAspectFill
 import platform.Photos.PHImageManager
 import platform.Photos.PHImageRequestOptions
+import platform.Photos.PHImageRequestOptionsDeliveryModeHighQualityFormat
 import platform.Photos.PHImageRequestOptionsDeliveryModeOpportunistic
 import platform.Photos.PHImageRequestOptionsResizeModeFast
 import kotlin.coroutines.resume
@@ -47,7 +48,6 @@ actual fun AssetThumbnail(
             contentScale = ContentScale.Crop
         )
     } else {
-        // Platzhalter, bis das Bild geladen ist
         Box(
             modifier = modifier.background(Color.Gray),
             contentAlignment = Alignment.Center
@@ -79,12 +79,12 @@ private suspend fun loadThumbnail(asset: Asset)
 
         val options = PHImageRequestOptions().apply {
             resizeMode = PHImageRequestOptionsResizeModeFast
-            deliveryMode = PHImageRequestOptionsDeliveryModeOpportunistic
+            deliveryMode = PHImageRequestOptionsDeliveryModeHighQualityFormat
             networkAccessAllowed = true
             synchronous = false
         }
 
-        val targetSize = CGSizeMake(300.0, 300.0)
+        val targetSize = CGSizeMake(600.0, 600.0)
         val manager = PHImageManager.defaultManager()
 
         manager.requestImageForAsset(

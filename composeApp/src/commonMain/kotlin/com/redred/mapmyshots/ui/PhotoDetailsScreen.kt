@@ -117,17 +117,13 @@ internal fun PhotoDetailsScreenContent(
                 .padding(p)
                 .padding(12.dp)
         ) {
-            // Hauptbild
             Card(
                 Modifier
                     .fillMaxWidth()
                     .aspectRatio(1f)
             ) {
-                val painter = rememberImagePainter(photo.uri)
-                Image(
-                    painter = painter,
-                    contentDescription = null,
-                    contentScale = ContentScale.Crop,
+                AssetThumbnail(
+                    asset = photo,
                     modifier = Modifier.fillMaxSize()
                 )
             }
@@ -171,13 +167,11 @@ internal fun PhotoDetailsScreenContent(
                         ) {
                             Column {
                                 val painter = rememberImagePainter(a.uri)
-                                Image(
-                                    painter = painter,
-                                    contentDescription = null,
+                                AssetThumbnail(
+                                    asset = a,
                                     modifier = Modifier
                                         .height(160.dp)
-                                        .fillMaxWidth(),
-                                    contentScale = ContentScale.Crop
+                                        .fillMaxWidth()
                                 )
                                 Text(
                                     text = names[a.id] ?: "",
