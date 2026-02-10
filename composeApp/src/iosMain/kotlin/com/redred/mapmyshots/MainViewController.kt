@@ -8,6 +8,7 @@ import org.koin.core.context.startKoin
 private var koinStarted = false
 
 fun MainViewController() = ComposeUIViewController {
+    println("MainViewController init $koinStarted")
     if (!koinStarted) {
         initKoin()
         koinStarted = true

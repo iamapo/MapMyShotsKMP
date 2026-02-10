@@ -3,7 +3,12 @@ package com.redred.mapmyshots.platform
 import com.redred.mapmyshots.model.Asset
 import kotlinx.cinterop.ExperimentalForeignApi
 import kotlinx.cinterop.useContents
+import kotlinx.coroutines.suspendCancellableCoroutine
+import platform.CoreLocation.CLLocation
 import platform.Photos.PHAsset
+import platform.Photos.PHAssetChangeRequest
+import platform.Photos.PHPhotoLibrary
+import kotlin.coroutines.resume
 
 class IOSExifPlatform : ExifPlatform {
 
@@ -23,13 +28,25 @@ class IOSExifPlatform : ExifPlatform {
         }
     }
 
-    override suspend fun writeLatLon(asset: Asset, lat: Double, lon: Double): Boolean {
-        // iOS erlaubt das direkte Bearbeiten von EXIF/Location in der Photos Library
-        // eigentlich nicht so einfach wie auf Android (ExifInterface).
-        // Man müsste über PHPhotoLibrary.performChanges neue Assets mit geänderten
-        // Metadaten anlegen. Das ist ziemlich aufwendig und oft unerwünscht.
-        //
-        // Für den Anfang: nicht unterstützt -> false zurückgeben.
-        return false
-    }
+    override suspend fun writeLatLon(asset: Asset, lat: Double, lon: Double): Boolean =
+        suspendCancellableCoroutine { cont ->
+            val fetchResult = PHAsset.fetchAssetsWithLocalIdentifiers(listOf(asset.id), null)
+            val phAsset = fetchResult.firstObject() as? PHAsset
+            if (phAsset == null) {
+                cont.resume(false)
+                return@suspendCancellableCoroutine
+            }
+
+            val newLocation = CLLocation(latitude = lat, longitude = lon)
+
+            PHPhotoLibrary.sharedPhotoLibrary().performChanges(
+                {
+                    val req = PHAssetChangeRequest.changeRequestForAsset(phAsset)
+                    req.location = newLocation
+                },
+                completionHandler = { success, _ ->
+                    if (cont.isActive) cont.resume(success)
+                }
+            )
+        }
 }
