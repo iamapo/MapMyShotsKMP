@@ -63,4 +63,8 @@ class PhotoService(
             endReached = page.endReached
         )
     }
+
+    suspend fun deleteAsset(asset: Asset): Boolean {
+        return repo.deleteAsset(asset)
+    }
 }

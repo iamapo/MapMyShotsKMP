@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.LinearProgressIndicator
@@ -16,12 +17,16 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -50,14 +55,51 @@ fun PhotoListScreen(
     val photos by vm.photos.collectAsState()
     val grouped = if (isLoading && photos.isEmpty()) emptyMap() else groupByMonth(photos)
 
+    var pendingDelete by remember { mutableStateOf<Asset?>(null) }
+    var deleteError by remember { mutableStateOf<String?>(null) }
+
     PhotoListScreenContent(
         isLoading = isLoading,
         isLoadingMore = isLoadingMore,
         progress = progress,
         grouped = grouped,
         onOpen = onOpen,
-        onLoadMore = { vm.loadNextPage() }
+        onLoadMore = { vm.loadNextPage() },
+        onLongPress = { asset -> pendingDelete = asset }
     )
+
+    if (pendingDelete != null) {
+        val asset = pendingDelete!!
+        AlertDialog(
+            onDismissRequest = { pendingDelete = null },
+            title = { Text("Foto löschen?") },
+            text = { Text("Möchtest du dieses Foto wirklich löschen?") },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        pendingDelete = null
+                        vm.delete(asset) { ok ->
+                            if (!ok) deleteError = "Löschen fehlgeschlagen (ggf. fehlende Berechtigung)."
+                        }
+                    }
+                ) { Text("Löschen") }
+            },
+            dismissButton = {
+                TextButton(onClick = { pendingDelete = null }) { Text("Abbrechen") }
+            }
+        )
+    }
+
+    if (deleteError != null) {
+        AlertDialog(
+            onDismissRequest = { deleteError = null },
+            title = { Text("Fehler") },
+            text = { Text(deleteError!!) },
+            confirmButton = {
+                TextButton(onClick = { deleteError = null }) { Text("OK") }
+            }
+        )
+    }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -68,7 +110,8 @@ internal fun PhotoListScreenContent(
     progress: com.redred.mapmyshots.viewmodel.LoadProgress,
     grouped: Map<String, List<Asset>>,
     onOpen: (Asset) -> Unit,
-    onLoadMore: () -> Unit
+    onLoadMore: () -> Unit,
+    onLongPress: (Asset) -> Unit
 ) {
     val listState = rememberLazyListState()
 
@@ -134,7 +177,12 @@ internal fun PhotoListScreenContent(
                 ) {
                     grouped.entries.forEach { e ->
                         item(key = e.key) {
-                            MonthGrid(month = e.key, photos = e.value, onTap = onOpen)
+                            MonthGrid(
+                                month = e.key,
+                                photos = e.value,
+                                onTap = onOpen,
+                                onLongPress = onLongPress
+                            )
                         }
                     }
 

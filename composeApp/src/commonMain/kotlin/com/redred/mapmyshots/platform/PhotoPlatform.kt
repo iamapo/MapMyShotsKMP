@@ -14,6 +14,7 @@ interface PhotoRepository {
     suspend fun listAllImages(limitPerAlbum: Int = 0): List<Asset>
     @OptIn(ExperimentalTime::class)
     suspend fun listImagesBetween(min: Instant, max: Instant): List<Asset>
+    suspend fun deleteAsset(asset: Asset): Boolean
 }
 
 interface ExifPlatform {

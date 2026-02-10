@@ -4,14 +4,18 @@ import com.redred.mapmyshots.model.Asset
 import kotlinx.cinterop.ExperimentalForeignApi
 import kotlinx.cinterop.pointed
 import kotlinx.cinterop.value
+import kotlinx.coroutines.suspendCancellableCoroutine
 import platform.Foundation.NSDate
 import platform.Foundation.NSPredicate
 import platform.Foundation.NSSortDescriptor
 import platform.Foundation.dateWithTimeIntervalSince1970
 import platform.Foundation.timeIntervalSince1970
 import platform.Photos.PHAsset
+import platform.Photos.PHAssetChangeRequest
 import platform.Photos.PHAssetMediaTypeImage
 import platform.Photos.PHFetchOptions
+import platform.Photos.PHPhotoLibrary
+import kotlin.coroutines.resume
 import kotlin.time.ExperimentalTime
 import kotlin.time.Instant
 
@@ -22,12 +26,10 @@ class IOSPhotoRepository : PhotoRepository {
         val options = PHFetchOptions().apply {
             sortDescriptors = listOf(NSSortDescriptor(key = "creationDate", ascending = false))
 
-            // iOS kann direkt limitieren (Binding kann Int oder ULong erwarten, je nach Version)
             if (limitPerAlbum > 0) {
                 try {
                     fetchLimit = limitPerAlbum.toULong()
                 } catch (_: Throwable) {
-                    // falls dein Binding fetchLimit als Long/Int hat, ggf. anpassen
                 }
             }
         }
@@ -53,7 +55,6 @@ class IOSPhotoRepository : PhotoRepository {
                 uri = "ph://$id"
             )
 
-            // Zusätzliches frühes Abbrechen, falls fetchLimit bei dir nicht greift:
             if (limitPerAlbum > 0 && out.size >= limitPerAlbum) {
                 stop?.pointed?.value = true
             }
@@ -103,7 +104,6 @@ class IOSPhotoRepository : PhotoRepository {
         val options = PHFetchOptions().apply {
             sortDescriptors = listOf(NSSortDescriptor(key = "creationDate", ascending = false))
             if (limit > 0) {
-                // wir fetchten nur "offset + limit" viele neueste Assets und schneiden dann auf die Page zu
                 try {
                     fetchLimit = (offset + limit).toULong()
                 } catch (_: Throwable) { /* ignore */ }
@@ -144,4 +144,24 @@ class IOSPhotoRepository : PhotoRepository {
         val endReached = out.size < limit
         return AssetPage(items = out, endReached = endReached)
     }
+
+    override suspend fun deleteAsset(asset: Asset): Boolean =
+        suspendCancellableCoroutine { cont ->
+            val fetchResult = PHAsset.fetchAssetsWithLocalIdentifiers(listOf(asset.id), null)
+            val phAsset = fetchResult.firstObject() as? PHAsset
+            if (phAsset == null) {
+                cont.resume(false)
+                return@suspendCancellableCoroutine
+            }
+
+            PHPhotoLibrary.sharedPhotoLibrary().performChanges(
+                {
+                    PHAssetChangeRequest.deleteAssets(fetchResult)
+                },
+                completionHandler = { success, _ ->
+                    if (cont.isActive) cont.resume(success)
+                }
+            )
+        }
+
 }

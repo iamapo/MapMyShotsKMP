@@ -1,6 +1,7 @@
 package com.redred.mapmyshots.ui
 
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
@@ -24,6 +25,7 @@ fun MonthGrid(
     month: String,
     photos: List<Asset>,
     onTap: (Asset) -> Unit,
+    onLongPress: (Asset) -> Unit,
     spacing: Dp = 8.dp
 ) {
     Column {
@@ -49,7 +51,10 @@ fun MonthGrid(
                             modifier = Modifier
                                 .size(cell)
                                 .clip(RoundedCornerShape(12.dp))
-                                .clickable { onTap(a) }
+                                .combinedClickable(
+                                    onClick = { onTap(a) },
+                                    onLongClick = { onLongPress(a) }
+                                )
                         )
                     }
                 }

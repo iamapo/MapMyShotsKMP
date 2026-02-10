@@ -94,4 +94,14 @@ class PhotoListViewModel(private val service: PhotoService) {
             }
         }
     }
+
+    fun delete(asset: Asset, onDone: (Boolean) -> Unit = {}) {
+        scope.launch {
+            val ok = service.deleteAsset(asset)
+            if (ok) {
+                _photos.value = _photos.value.filterNot { it.id == asset.id }
+            }
+            onDone(ok)
+        }
+    }
 }

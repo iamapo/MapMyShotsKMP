@@ -100,6 +100,18 @@ class AndroidPhotoRepository(private val context: Context): PhotoRepository {
         }
         return emptyList()
     }
+
+    override suspend fun deleteAsset(asset: Asset): Boolean {
+        return try {
+            val uri = asset.uri.toUri()
+            val rows = context.contentResolver.delete(uri, null, null)
+            rows > 0
+        } catch (_: SecurityException) {
+            false
+        } catch (_: Throwable) {
+            false
+        }
+    }
 }
 
 class AndroidExifPlatform(private val context: Context): ExifPlatform {
