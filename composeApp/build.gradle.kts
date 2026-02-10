@@ -33,19 +33,19 @@ kotlin {
         }
         commonMain.dependencies {
             api("io.github.qdsfdhvh:image-loader:1.10.0")
-            implementation(compose.runtime)
-            implementation(compose.foundation)
-            implementation(compose.material3)
-            implementation(compose.ui)
-            implementation(compose.components.resources)
-            implementation(compose.components.uiToolingPreview)
+            implementation(libs.runtime)
+            implementation(libs.foundation)
+            implementation(libs.material3)
+            implementation(libs.ui)
+            implementation(libs.components.resources)
+            implementation(libs.ui.tooling.preview)
             implementation(libs.androidx.lifecycle.viewmodelCompose)
             implementation(libs.androidx.lifecycle.runtimeCompose)
             implementation(libs.kotlinx.datetime)
             implementation(libs.koin.core)
             implementation(libs.koin.compose)
             implementation(libs.accompanist.flowlayout)
-            implementation(compose.materialIconsExtended)
+            implementation(libs.material.icons.extended)
 
         }
         commonTest.dependencies {
