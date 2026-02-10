@@ -14,11 +14,7 @@ data class LoadProgress(
     val total: Int = 0,
     val found: Int = 0,
     val active: Boolean = false
-) {
-    val fraction: Float
-        get() = if (!active || total <= 0) 0f
-        else (scanned.toFloat() / total.toFloat()).coerceIn(0f, 1f)
-}
+)
 
 class PhotoListViewModel(private val service: PhotoService) {
     private val job = SupervisorJob()
@@ -43,6 +39,7 @@ class PhotoListViewModel(private val service: PhotoService) {
     private var scannedTotal = 0
     private var foundTotal = 0
 
+    private val minInitialHits = 60
     fun clear() = job.cancel()
 
     fun loadFirstPage() {
@@ -52,47 +49,56 @@ class PhotoListViewModel(private val service: PhotoService) {
         scannedTotal = 0
         foundTotal = 0
         _photos.value = emptyList()
-        loadInternal(reset = true)
+        scope.launch {
+            var first = true
+            while (!endReached && _photos.value.size < minInitialHits) {
+                loadChunk(reset = first)
+                first = false
+            }
+        }
+    }
+
+    private suspend fun loadChunk(reset: Boolean) {
+        if (reset) _isLoading.value = true else _isLoadingMore.value = true
+        _progress.value = LoadProgress(
+            active = true,
+            scanned = scannedTotal,
+            total = scannedTotal,
+            found = foundTotal
+        )
+
+        try {
+            val delta = service.loadNextChunkWithoutLocation(
+                offset = candidateOffset,
+                candidateLimit = candidatePageSize,
+                batchSize = 24
+            ) { scannedInChunk, chunkTotal, foundInChunk ->
+                _progress.value = LoadProgress(
+                    active = true,
+                    scanned = scannedTotal + scannedInChunk,
+                    total = scannedTotal + chunkTotal,
+                    found = foundTotal + foundInChunk
+                )
+            }
+
+            candidateOffset += delta.scannedInChunk
+            scannedTotal += delta.scannedInChunk
+            foundTotal += delta.foundInChunk
+            endReached = delta.endReached
+
+            if (delta.newHits.isNotEmpty()) {
+                _photos.value += delta.newHits
+            }
+        } finally {
+            _isLoading.value = false
+            _isLoadingMore.value = false
+            _progress.value = _progress.value.copy(active = false)
+        }
     }
 
     fun loadNextPage() {
         if (_isLoadingMore.value || _isLoading.value || endReached) return
-        loadInternal(reset = false)
-    }
-
-    private fun loadInternal(reset: Boolean) {
-        scope.launch {
-            if (reset) _isLoading.value = true else _isLoadingMore.value = true
-            _progress.value = LoadProgress(active = true, scanned = scannedTotal, total = scannedTotal, found = foundTotal)
-
-            try {
-                val delta = service.loadNextChunkWithoutLocation(
-                    offset = candidateOffset,
-                    candidateLimit = candidatePageSize,
-                    batchSize = 24
-                ) { scannedInChunk, chunkTotal, foundInChunk ->
-                    _progress.value = LoadProgress(
-                        active = true,
-                        scanned = scannedTotal + scannedInChunk,
-                        total = scannedTotal + chunkTotal,
-                        found = foundTotal + foundInChunk
-                    )
-                }
-
-                candidateOffset += delta.scannedInChunk
-                scannedTotal += delta.scannedInChunk
-                foundTotal += delta.foundInChunk
-                endReached = delta.endReached
-
-                if (delta.newHits.isNotEmpty()) {
-                    _photos.value += delta.newHits
-                }
-            } finally {
-                _isLoading.value = false
-                _isLoadingMore.value = false
-                _progress.value = _progress.value.copy(active = false)
-            }
-        }
+        scope.launch { loadChunk(reset = false) }
     }
 
     fun delete(asset: Asset, onDone: (Boolean) -> Unit = {}) {
