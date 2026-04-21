@@ -1,6 +1,7 @@
 package com.redred.mapmyshots.ui
 
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -38,12 +39,16 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.redred.mapmyshots.model.Asset
 import com.redred.mapmyshots.viewmodel.PhotoDetailsEvent
 import com.redred.mapmyshots.viewmodel.PhotoDetailsIntent
 import com.redred.mapmyshots.viewmodel.PhotoDetailsViewModel
+import kotlinx.datetime.TimeZone
+import kotlinx.datetime.toLocalDateTime
 import org.koin.compose.koinInject
 import org.koin.core.parameter.parametersOf
 import kotlin.time.ExperimentalTime
@@ -175,7 +180,7 @@ internal fun PhotoDetailsScreenContent(
                     .fillMaxWidth()
                     .aspectRatio(1f)
             ) {
-                AssetThumbnail(
+                AssetThumbnailWithDateTime(
                     asset = photo,
                     modifier = Modifier.fillMaxSize()
                 )
@@ -217,7 +222,7 @@ internal fun PhotoDetailsScreenContent(
                             Modifier.clickable { onAssetClicked(a) }
                         ) {
                             Column {
-                                AssetThumbnail(
+                                AssetThumbnailWithDateTime(
                                     asset = a,
                                     modifier = Modifier
                                         .height(160.dp)
@@ -225,7 +230,9 @@ internal fun PhotoDetailsScreenContent(
                                 )
                                 Text(
                                     text = names[a.id] ?: "",
-                                    modifier = Modifier.padding(8.dp)
+                                    modifier = Modifier.padding(bottom = 8.dp, start = 8.dp),
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis,
                                 )
                             }
                         }
@@ -237,6 +244,40 @@ internal fun PhotoDetailsScreenContent(
         }
     }
 }
+
+@Composable
+private fun AssetThumbnailWithDateTime(
+    asset: Asset,
+    modifier: Modifier = Modifier
+) {
+    Box(modifier = modifier) {
+        AssetThumbnail(
+            asset = asset,
+            modifier = Modifier.fillMaxSize()
+        )
+        Text(
+            text = formatTakenAt(asset.takenAt),
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            modifier = Modifier
+                .align(Alignment.BottomStart)
+                .fillMaxWidth()
+                .padding(horizontal = 8.dp)
+        )
+    }
+}
+
+private fun formatTakenAt(value: Instant): String {
+    val ldt = value.toLocalDateTime(TimeZone.currentSystemDefault())
+    val day = ldt.day.twoDigits()
+    val month = (ldt.month.ordinal + 1).twoDigits()
+    val year = ldt.year
+    val hour = ldt.hour.twoDigits()
+    val minute = ldt.minute.twoDigits()
+    return "$day.$month.$year $hour:$minute"
+}
+
+private fun Int.twoDigits(): String = toString().padStart(2, '0')
 
 @Composable
 private fun SegmentedButtons(
