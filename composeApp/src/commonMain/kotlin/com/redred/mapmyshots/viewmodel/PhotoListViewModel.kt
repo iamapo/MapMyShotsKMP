@@ -32,6 +32,7 @@ sealed interface PhotoListIntent {
     data object LoadFirstPage : PhotoListIntent
     data object LoadNextPage : PhotoListIntent
     data class Delete(val asset: Asset) : PhotoListIntent
+    data class RemoveFromList(val assetId: String) : PhotoListIntent
 }
 
 sealed interface PhotoListEvent {
@@ -63,6 +64,7 @@ class PhotoListViewModel(private val service: PhotoService) {
             PhotoListIntent.LoadFirstPage -> loadFirstPage()
             PhotoListIntent.LoadNextPage -> loadNextPage()
             is PhotoListIntent.Delete -> delete(intent.asset)
+            is PhotoListIntent.RemoveFromList -> removeFromList(intent.assetId)
         }
     }
 
@@ -144,12 +146,16 @@ class PhotoListViewModel(private val service: PhotoService) {
         scope.launch {
             val ok = service.deleteAsset(asset)
             if (ok) {
-                _uiState.update { state ->
-                    state.copy(photos = state.photos.filterNot { it.id == asset.id })
-                }
+                removeFromList(asset.id)
             } else {
                 _events.tryEmit(PhotoListEvent.DeleteFailed)
             }
+        }
+    }
+
+    private fun removeFromList(assetId: String) {
+        _uiState.update { state ->
+            state.copy(photos = state.photos.filterNot { it.id == assetId })
         }
     }
 }

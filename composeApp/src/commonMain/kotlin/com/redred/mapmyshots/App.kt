@@ -9,6 +9,7 @@ import androidx.compose.runtime.remember
 import com.redred.mapmyshots.model.Asset
 import com.redred.mapmyshots.ui.PhotoDetailsScreen
 import com.redred.mapmyshots.ui.PhotoListScreen
+import com.redred.mapmyshots.viewmodel.PhotoListIntent
 import com.redred.mapmyshots.viewmodel.PhotoListViewModel
 import org.koin.compose.koinInject
 
@@ -26,7 +27,8 @@ fun App(
     }
 
     val current = remember { mutableStateOf<Asset?>(null) }
-    if (current.value == null) {
+    val selectedPhoto = current.value
+    if (selectedPhoto == null) {
         PhotoListScreen(
             onOpen = { asset -> current.value = asset },
             vm = listVm,
@@ -34,6 +36,13 @@ fun App(
             clearOnDispose = false
         )
     } else {
-        PhotoDetailsScreen(photo = current.value!!, onSaved = { current.value = null }, onBack = { current.value = null } )
+        PhotoDetailsScreen(
+            photo = selectedPhoto,
+            onSaved = {
+                listVm.onIntent(PhotoListIntent.RemoveFromList(selectedPhoto.id))
+                current.value = null
+            },
+            onBack = { current.value = null }
+        )
     }
 }
