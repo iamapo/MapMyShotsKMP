@@ -6,5 +6,6 @@ data class Asset @OptIn(ExperimentalTime::class) constructor(
     val id: String,
     val displayName: String?,
     val takenAt: kotlin.time.Instant,
-    val uri: String
+    val uri: String,
+    val hasLocation: Boolean? = null
 )

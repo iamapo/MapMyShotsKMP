@@ -43,7 +43,7 @@ class PhotoService(
             .flatMap { batch ->
                 val res = batch.map { asset ->
                     async(Dispatchers.IO) {
-                        val hasLatLon = exif.getLatLon(asset) != null
+                        val hasLatLon = exif.hasLatLon(asset)
                         if (!hasLatLon) asset else null
                     }
                 }.awaitAll()

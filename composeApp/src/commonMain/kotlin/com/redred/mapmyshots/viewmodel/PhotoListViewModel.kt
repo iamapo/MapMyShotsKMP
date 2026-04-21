@@ -5,8 +5,13 @@ import com.redred.mapmyshots.service.PhotoService
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asSharedFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
 data class LoadProgress(
@@ -16,21 +21,32 @@ data class LoadProgress(
     val active: Boolean = false
 )
 
+data class PhotoListUiState(
+    val isLoading: Boolean = false,
+    val isLoadingMore: Boolean = false,
+    val progress: LoadProgress = LoadProgress(),
+    val photos: List<Asset> = emptyList()
+)
+
+sealed interface PhotoListIntent {
+    data object LoadFirstPage : PhotoListIntent
+    data object LoadNextPage : PhotoListIntent
+    data class Delete(val asset: Asset) : PhotoListIntent
+}
+
+sealed interface PhotoListEvent {
+    data object DeleteFailed : PhotoListEvent
+}
+
 class PhotoListViewModel(private val service: PhotoService) {
     private val job = SupervisorJob()
     private val scope = CoroutineScope(Dispatchers.Default + job)
 
-    private val _isLoading = MutableStateFlow(false)
-    val isLoading: StateFlow<Boolean> = _isLoading
+    private val _uiState = MutableStateFlow(PhotoListUiState())
+    val uiState: StateFlow<PhotoListUiState> = _uiState.asStateFlow()
 
-    private val _isLoadingMore = MutableStateFlow(false)
-    val isLoadingMore: StateFlow<Boolean> = _isLoadingMore
-
-    private val _progress = MutableStateFlow(LoadProgress())
-    val progress: StateFlow<LoadProgress> = _progress
-
-    private val _photos = MutableStateFlow<List<Asset>>(emptyList())
-    val photos: StateFlow<List<Asset>> = _photos
+    private val _events = MutableSharedFlow<PhotoListEvent>(extraBufferCapacity = 1)
+    val events: SharedFlow<PhotoListEvent> = _events.asSharedFlow()
 
     private val candidatePageSize = 200
     private var candidateOffset = 0
@@ -42,16 +58,24 @@ class PhotoListViewModel(private val service: PhotoService) {
     private val minInitialHits = 60
     fun clear() = job.cancel()
 
+    fun onIntent(intent: PhotoListIntent) {
+        when (intent) {
+            PhotoListIntent.LoadFirstPage -> loadFirstPage()
+            PhotoListIntent.LoadNextPage -> loadNextPage()
+            is PhotoListIntent.Delete -> delete(intent.asset)
+        }
+    }
+
     fun loadFirstPage() {
-        if (_photos.value.isNotEmpty()) return
+        if (_uiState.value.photos.isNotEmpty()) return
         candidateOffset = 0
         endReached = false
         scannedTotal = 0
         foundTotal = 0
-        _photos.value = emptyList()
+        _uiState.update { it.copy(photos = emptyList()) }
         scope.launch {
             var first = true
-            while (!endReached && _photos.value.size < minInitialHits) {
+            while (!endReached && _uiState.value.photos.size < minInitialHits) {
                 loadChunk(reset = first)
                 first = false
             }
@@ -59,13 +83,18 @@ class PhotoListViewModel(private val service: PhotoService) {
     }
 
     private suspend fun loadChunk(reset: Boolean) {
-        if (reset) _isLoading.value = true else _isLoadingMore.value = true
-        _progress.value = LoadProgress(
-            active = true,
-            scanned = scannedTotal,
-            total = scannedTotal,
-            found = foundTotal
-        )
+        _uiState.update { state ->
+            state.copy(
+                isLoading = if (reset) true else state.isLoading,
+                isLoadingMore = if (reset) state.isLoadingMore else true,
+                progress = LoadProgress(
+                    active = true,
+                    scanned = scannedTotal,
+                    total = scannedTotal,
+                    found = foundTotal
+                )
+            )
+        }
 
         try {
             val delta = service.loadNextChunkWithoutLocation(
@@ -73,12 +102,16 @@ class PhotoListViewModel(private val service: PhotoService) {
                 candidateLimit = candidatePageSize,
                 batchSize = 24
             ) { scannedInChunk, chunkTotal, foundInChunk ->
-                _progress.value = LoadProgress(
-                    active = true,
-                    scanned = scannedTotal + scannedInChunk,
-                    total = scannedTotal + chunkTotal,
-                    found = foundTotal + foundInChunk
-                )
+                _uiState.update { state ->
+                    state.copy(
+                        progress = LoadProgress(
+                            active = true,
+                            scanned = scannedTotal + scannedInChunk,
+                            total = scannedTotal + chunkTotal,
+                            found = foundTotal + foundInChunk
+                        )
+                    )
+                }
             }
 
             candidateOffset += delta.scannedInChunk
@@ -87,27 +120,36 @@ class PhotoListViewModel(private val service: PhotoService) {
             endReached = delta.endReached
 
             if (delta.newHits.isNotEmpty()) {
-                _photos.value += delta.newHits
+                _uiState.update { state ->
+                    state.copy(photos = state.photos + delta.newHits)
+                }
             }
         } finally {
-            _isLoading.value = false
-            _isLoadingMore.value = false
-            _progress.value = _progress.value.copy(active = false)
+            _uiState.update { state ->
+                state.copy(
+                    isLoading = false,
+                    isLoadingMore = false,
+                    progress = state.progress.copy(active = false)
+                )
+            }
         }
     }
 
     fun loadNextPage() {
-        if (_isLoadingMore.value || _isLoading.value || endReached) return
+        if (_uiState.value.isLoadingMore || _uiState.value.isLoading || endReached) return
         scope.launch { loadChunk(reset = false) }
     }
 
-    fun delete(asset: Asset, onDone: (Boolean) -> Unit = {}) {
+    fun delete(asset: Asset) {
         scope.launch {
             val ok = service.deleteAsset(asset)
             if (ok) {
-                _photos.value = _photos.value.filterNot { it.id == asset.id }
+                _uiState.update { state ->
+                    state.copy(photos = state.photos.filterNot { it.id == asset.id })
+                }
+            } else {
+                _events.tryEmit(PhotoListEvent.DeleteFailed)
             }
-            onDone(ok)
         }
     }
 }

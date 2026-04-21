@@ -2,8 +2,6 @@ package com.redred.mapmyshots.platform
 
 import com.redred.mapmyshots.model.Asset
 import kotlinx.cinterop.ExperimentalForeignApi
-import kotlinx.cinterop.pointed
-import kotlinx.cinterop.value
 import kotlinx.coroutines.suspendCancellableCoroutine
 import platform.Foundation.NSDate
 import platform.Foundation.NSPredicate
@@ -14,6 +12,7 @@ import platform.Photos.PHAsset
 import platform.Photos.PHAssetChangeRequest
 import platform.Photos.PHAssetMediaTypeImage
 import platform.Photos.PHFetchOptions
+import platform.Photos.PHFetchResult
 import platform.Photos.PHPhotoLibrary
 import kotlin.coroutines.resume
 import kotlin.time.ExperimentalTime
@@ -41,23 +40,9 @@ class IOSPhotoRepository : PhotoRepository {
 
         val out = mutableListOf<Asset>()
 
-        fetchResult.enumerateObjectsUsingBlock { obj, _, stop ->
+        fetchResult.enumerateObjectsUsingBlock { obj, _, _ ->
             val asset = obj as? PHAsset ?: return@enumerateObjectsUsingBlock
-
-            val id = asset.localIdentifier
-            val date = asset.creationDate ?: NSDate()
-            val tsMillis = (date.timeIntervalSince1970 * 1000.0).toLong()
-
-            out += Asset(
-                id = id,
-                displayName = "",
-                takenAt = Instant.fromEpochMilliseconds(tsMillis),
-                uri = "ph://$id"
-            )
-
-            if (limitPerAlbum > 0 && out.size >= limitPerAlbum) {
-                stop?.pointed?.value = true
-            }
+            out += asset.toAsset(displayName = "")
         }
 
         return out
@@ -83,17 +68,7 @@ class IOSPhotoRepository : PhotoRepository {
 
         result.enumerateObjectsUsingBlock { obj, _, _ ->
             val phAsset = obj as? PHAsset ?: return@enumerateObjectsUsingBlock
-
-            val id = phAsset.localIdentifier
-            val date = phAsset.creationDate ?: NSDate()
-            val tsMillis = (date.timeIntervalSince1970 * 1000.0).toLong()
-
-            out += Asset(
-                id = id,
-                displayName = id,
-                takenAt = Instant.fromEpochMilliseconds(tsMillis),
-                uri = "ph://$id"
-            )
+            out += phAsset.toAsset(displayName = phAsset.localIdentifier)
         }
 
         return out
@@ -103,11 +78,6 @@ class IOSPhotoRepository : PhotoRepository {
     override suspend fun listImagesPage(offset: Int, limit: Int): AssetPage {
         val options = PHFetchOptions().apply {
             sortDescriptors = listOf(NSSortDescriptor(key = "creationDate", ascending = false))
-            if (limit > 0) {
-                try {
-                    fetchLimit = (offset + limit).toULong()
-                } catch (_: Throwable) { /* ignore */ }
-            }
         }
 
         val fetchResult = PHAsset.fetchAssetsWithMediaType(
@@ -115,34 +85,7 @@ class IOSPhotoRepository : PhotoRepository {
             options = options
         )
 
-        val out = mutableListOf<Asset>()
-        var index = 0
-
-        fetchResult.enumerateObjectsUsingBlock { obj, _, stop ->
-            val asset = obj as? PHAsset ?: return@enumerateObjectsUsingBlock
-
-            if (index >= offset && out.size < limit) {
-                val id = asset.localIdentifier
-                val date = asset.creationDate ?: NSDate()
-                val tsMillis = (date.timeIntervalSince1970 * 1000.0).toLong()
-
-                out += Asset(
-                    id = id,
-                    displayName = "",
-                    takenAt = Instant.fromEpochMilliseconds(tsMillis),
-                    uri = "ph://$id"
-                )
-            }
-
-            index += 1
-
-            if (out.size >= limit) {
-                stop?.pointed?.value = true
-            }
-        }
-
-        val endReached = out.size < limit
-        return AssetPage(items = out, endReached = endReached)
+        return buildPage(fetchResult, offset, limit)
     }
 
     override suspend fun deleteAsset(asset: Asset): Boolean =
@@ -164,4 +107,40 @@ class IOSPhotoRepository : PhotoRepository {
             )
         }
 
+}
+
+@OptIn(ExperimentalForeignApi::class, ExperimentalTime::class)
+private fun buildPage(fetchResult: PHFetchResult, offset: Int, limit: Int): AssetPage {
+    val totalCount = fetchResult.count.toInt()
+    if (limit <= 0 || offset >= totalCount) {
+        return AssetPage(items = emptyList(), endReached = true)
+    }
+
+    val endExclusive = minOf(offset + limit, totalCount)
+    val out = ArrayList<Asset>(endExclusive - offset)
+
+    for (index in offset until endExclusive) {
+        val asset = fetchResult.objectAtIndex(index.toULong()) as? PHAsset ?: continue
+        out += asset.toAsset(displayName = "")
+    }
+
+    return AssetPage(
+        items = out,
+        endReached = endExclusive >= totalCount
+    )
+}
+
+@OptIn(ExperimentalTime::class)
+private fun PHAsset.toAsset(displayName: String): Asset {
+    val id = localIdentifier
+    val date = creationDate ?: NSDate()
+    val tsMillis = (date.timeIntervalSince1970 * 1000.0).toLong()
+
+    return Asset(
+        id = id,
+        displayName = displayName,
+        takenAt = Instant.fromEpochMilliseconds(tsMillis),
+        uri = "ph://$id",
+        hasLocation = location != null
+    )
 }

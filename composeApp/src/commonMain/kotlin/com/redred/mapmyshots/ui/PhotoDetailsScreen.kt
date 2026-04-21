@@ -34,15 +34,14 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.redred.mapmyshots.model.Asset
+import com.redred.mapmyshots.viewmodel.PhotoDetailsEvent
+import com.redred.mapmyshots.viewmodel.PhotoDetailsIntent
 import com.redred.mapmyshots.viewmodel.PhotoDetailsViewModel
-import com.seiko.imageloader.rememberImagePainter
-import kotlinx.coroutines.launch
 import org.koin.compose.koinInject
 import org.koin.core.parameter.parametersOf
 
@@ -55,22 +54,30 @@ fun PhotoDetailsScreen(
 ) {
     val vm: PhotoDetailsViewModel = koinInject(parameters = { parametersOf(photo) })
 
-    val scope = rememberCoroutineScope()
-
     DisposableEffect(vm) {
         onDispose { vm.clear() }
     }
 
-    val timeRange by vm.timeRange.collectAsState()
-    val loading by vm.loading.collectAsState()
-    val similar by vm.similar.collectAsState()
-    val names by vm.locationNames.collectAsState()
+    val uiState by vm.uiState.collectAsState()
+    val timeRange = uiState.timeRange
+    val loading = uiState.loading
+    val similar = uiState.similar
+    val names = uiState.locationNames
 
     var pendingApplyFrom by remember { mutableStateOf<Asset?>(null) }
     var applyError by remember { mutableStateOf<String?>(null) }
 
     LaunchedEffect(photo.id) {
-        vm.loadSimilar()
+        vm.onIntent(PhotoDetailsIntent.LoadSimilar)
+    }
+
+    LaunchedEffect(vm) {
+        vm.events.collect { event ->
+            when (event) {
+                PhotoDetailsEvent.Saved -> onSaved()
+                is PhotoDetailsEvent.Error -> applyError = event.message
+            }
+        }
     }
 
     PhotoDetailsScreenContent(
@@ -79,7 +86,9 @@ fun PhotoDetailsScreen(
         loading = loading,
         similar = similar,
         names = names,
-        onTimeRangeSelected = vm::setTimeRange,
+        onTimeRangeSelected = { label ->
+            vm.onIntent(PhotoDetailsIntent.SetTimeRange(label))
+        },
         onAssetClicked = { a ->
             pendingApplyFrom = a
         },
@@ -102,11 +111,7 @@ fun PhotoDetailsScreen(
                     onClick = {
                         pendingApplyFrom = null
                         applyError = null
-                        scope.launch {
-                            val ok = vm.applyLocationFrom(src)
-                            if (ok) onSaved()
-                            else applyError = "Location konnte nicht übernommen werden."
-                        }
+                        vm.onIntent(PhotoDetailsIntent.ApplyLocationFrom(src))
                     }
                 ) { Text("Übernehmen") }
             },

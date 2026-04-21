@@ -19,6 +19,12 @@ class SimilarityService(
         )
         val candidates = repo.listImagesBetween(min, max)
         return candidates.filter { it.id != target.id }
-            .filter { exif.getLatLon(it) != null }
+            .filter { candidate ->
+                when (candidate.hasLocation) {
+                    true -> true
+                    false -> false
+                    null -> exif.getLatLon(candidate) != null
+                }
+            }
     }
 }

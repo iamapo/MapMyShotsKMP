@@ -8,6 +8,11 @@ class ExifService(private val exifPlatform: ExifPlatform) {
     private val cache = mutableMapOf<String, Pair<Double, Double>?>()
     private val nameCache = mutableMapOf<String, String>()
 
+    suspend fun hasLatLon(asset: Asset): Boolean {
+        asset.hasLocation?.let { return it }
+        return getLatLon(asset) != null
+    }
+
     suspend fun getLat(asset: Asset): Double? = getLatLon(asset)?.first
     suspend fun getLon(asset: Asset): Double? = getLatLon(asset)?.second
 

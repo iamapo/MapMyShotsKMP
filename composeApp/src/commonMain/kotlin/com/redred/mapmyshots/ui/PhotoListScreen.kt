@@ -8,11 +8,11 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
@@ -34,6 +34,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import com.redred.mapmyshots.model.Asset
 import com.redred.mapmyshots.util.groupByMonth
+import com.redred.mapmyshots.viewmodel.PhotoListEvent
+import com.redred.mapmyshots.viewmodel.PhotoListIntent
 import com.redred.mapmyshots.viewmodel.PhotoListViewModel
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
@@ -43,28 +45,45 @@ import org.koin.compose.koinInject
 @Composable
 fun PhotoListScreen(
     onOpen: (Asset) -> Unit,
-    vm: PhotoListViewModel = koinInject()
+    vm: PhotoListViewModel = koinInject(),
+    listState: LazyListState = rememberLazyListState(),
+    clearOnDispose: Boolean = true
 ) {
-    DisposableEffect(vm) { onDispose { vm.clear() } }
-    LaunchedEffect(Unit) { vm.loadFirstPage() }
+    DisposableEffect(vm, clearOnDispose) {
+        onDispose {
+            if (clearOnDispose) vm.clear()
+        }
+    }
+    LaunchedEffect(Unit) { vm.onIntent(PhotoListIntent.LoadFirstPage) }
 
-    val isLoading by vm.isLoading.collectAsState()
-    val isLoadingMore by vm.isLoadingMore.collectAsState()
-    val progress by vm.progress.collectAsState()
+    val uiState by vm.uiState.collectAsState()
 
-    val photos by vm.photos.collectAsState()
+    val photos = uiState.photos
+    val isLoading = uiState.isLoading
+    val isLoadingMore = uiState.isLoadingMore
+    val progress = uiState.progress
     val grouped = if (isLoading && photos.isEmpty()) emptyMap() else groupByMonth(photos)
 
     var pendingDelete by remember { mutableStateOf<Asset?>(null) }
     var deleteError by remember { mutableStateOf<String?>(null) }
 
+    LaunchedEffect(vm) {
+        vm.events.collect { event ->
+            when (event) {
+                PhotoListEvent.DeleteFailed ->
+                    deleteError = "Löschen fehlgeschlagen (ggf. fehlende Berechtigung)."
+            }
+        }
+    }
+
     PhotoListScreenContent(
+        listState = listState,
         isLoading = isLoading,
         isLoadingMore = isLoadingMore,
         progress = progress,
         grouped = grouped,
         onOpen = onOpen,
-        onLoadMore = { vm.loadNextPage() },
+        onLoadMore = { vm.onIntent(PhotoListIntent.LoadNextPage) },
         onLongPress = { asset -> pendingDelete = asset }
     )
 
@@ -78,9 +97,7 @@ fun PhotoListScreen(
                 TextButton(
                     onClick = {
                         pendingDelete = null
-                        vm.delete(asset) { ok ->
-                            if (!ok) deleteError = "Löschen fehlgeschlagen (ggf. fehlende Berechtigung)."
-                        }
+                        vm.onIntent(PhotoListIntent.Delete(asset))
                     }
                 ) { Text("Löschen") }
             },
@@ -105,6 +122,7 @@ fun PhotoListScreen(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 internal fun PhotoListScreenContent(
+    listState: LazyListState,
     isLoading: Boolean,
     isLoadingMore: Boolean,
     progress: com.redred.mapmyshots.viewmodel.LoadProgress,
@@ -113,8 +131,6 @@ internal fun PhotoListScreenContent(
     onLoadMore: () -> Unit,
     onLongPress: (Asset) -> Unit
 ) {
-    val listState = rememberLazyListState()
-
     val latestLoading by rememberUpdatedState(isLoading)
     val latestLoadingMore by rememberUpdatedState(isLoadingMore)
 
