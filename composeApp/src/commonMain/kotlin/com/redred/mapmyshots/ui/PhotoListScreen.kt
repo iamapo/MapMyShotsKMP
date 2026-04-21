@@ -1,6 +1,5 @@
 package com.redred.mapmyshots.ui
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
@@ -31,15 +30,19 @@ import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.redred.mapmyshots.model.Asset
 import com.redred.mapmyshots.util.groupByMonth
+import com.redred.mapmyshots.viewmodel.LoadProgress
 import com.redred.mapmyshots.viewmodel.PhotoListEvent
 import com.redred.mapmyshots.viewmodel.PhotoListIntent
 import com.redred.mapmyshots.viewmodel.PhotoListViewModel
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
 import org.koin.compose.koinInject
+import kotlin.time.ExperimentalTime
+import kotlin.time.Instant
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -125,7 +128,7 @@ internal fun PhotoListScreenContent(
     listState: LazyListState,
     isLoading: Boolean,
     isLoadingMore: Boolean,
-    progress: com.redred.mapmyshots.viewmodel.LoadProgress,
+    progress: LoadProgress,
     grouped: Map<String, List<Asset>>,
     onOpen: (Asset) -> Unit,
     onLoadMore: () -> Unit,
@@ -218,4 +221,47 @@ internal fun PhotoListScreenContent(
             }
         }
     }
+}
+
+@OptIn(ExperimentalTime::class)
+@Preview
+@Composable
+private fun PhotoListScreenContentPreview() {
+    val assets = listOf(
+        Asset(
+            id = "preview_1",
+            displayName = "IMG_001",
+            takenAt = Instant.fromEpochMilliseconds(1761472800000),
+            uri = "content://preview/1"
+        ),
+        Asset(
+            id = "preview_2",
+            displayName = "IMG_002",
+            takenAt = Instant.fromEpochMilliseconds(1761386400000),
+            uri = "content://preview/2"
+        ),
+        Asset(
+            id = "preview_3",
+            displayName = "IMG_003",
+            takenAt = Instant.fromEpochMilliseconds(1761300000000),
+            uri = "content://preview/3"
+        ),
+        Asset(
+            id = "preview_4",
+            displayName = "IMG_004",
+            takenAt = Instant.fromEpochMilliseconds(1761213600000),
+            uri = "content://preview/4"
+        )
+    )
+
+    PhotoListScreenContent(
+        listState = rememberLazyListState(),
+        isLoading = false,
+        isLoadingMore = false,
+        progress = LoadProgress(scanned = 120, total = 120, found = assets.size, active = false),
+        grouped = mapOf("October 2025" to assets),
+        onOpen = {},
+        onLoadMore = {},
+        onLongPress = {}
+    )
 }

@@ -23,6 +23,7 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -37,6 +38,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.redred.mapmyshots.model.Asset
 import com.redred.mapmyshots.viewmodel.PhotoDetailsEvent
@@ -44,6 +46,8 @@ import com.redred.mapmyshots.viewmodel.PhotoDetailsIntent
 import com.redred.mapmyshots.viewmodel.PhotoDetailsViewModel
 import org.koin.compose.koinInject
 import org.koin.core.parameter.parametersOf
+import kotlin.time.ExperimentalTime
+import kotlin.time.Instant
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -248,5 +252,47 @@ private fun SegmentedButtons(
                 label = { Text(it) }
             )
         }
+    }
+}
+
+@OptIn(ExperimentalTime::class)
+@Preview
+@Composable
+private fun PhotoDetailsScreenContentPreview() {
+    val current = Asset(
+        id = "preview_current",
+        displayName = "IMG_CURRENT",
+        takenAt = Instant.fromEpochMilliseconds(1761472800000),
+        uri = "content://preview/current"
+    )
+    val similar = listOf(
+        Asset(
+            id = "preview_sim_1",
+            displayName = "IMG_SIM_1",
+            takenAt = Instant.fromEpochMilliseconds(1761469200000),
+            uri = "content://preview/sim_1"
+        ),
+        Asset(
+            id = "preview_sim_2",
+            displayName = "IMG_SIM_2",
+            takenAt = Instant.fromEpochMilliseconds(1761465600000),
+            uri = "content://preview/sim_2"
+        )
+    )
+
+    MaterialTheme {
+        PhotoDetailsScreenContent(
+            photo = current,
+            timeRange = "1 hour",
+            loading = false,
+            similar = similar,
+            names = mapOf(
+                "preview_sim_1" to "Berlin, Germany",
+                "preview_sim_2" to "Potsdam, Germany"
+            ),
+            onTimeRangeSelected = {},
+            onAssetClicked = {},
+            onBack = {}
+        )
     }
 }
