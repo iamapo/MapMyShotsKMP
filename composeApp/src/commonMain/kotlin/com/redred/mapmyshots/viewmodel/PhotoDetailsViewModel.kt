@@ -1,6 +1,7 @@
 package com.redred.mapmyshots.viewmodel
 
 import com.redred.mapmyshots.model.Asset
+import com.redred.mapmyshots.model.TimeWindow
 import com.redred.mapmyshots.platform.GeocoderPlatform
 import com.redred.mapmyshots.service.ExifService
 import com.redred.mapmyshots.service.SimilarityService
@@ -18,7 +19,7 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
 data class PhotoDetailsUiState(
-    val timeRange: String = "1 hour",
+    val timeWindow: TimeWindow = TimeWindow.OneHour,
     val loading: Boolean = false,
     val similar: List<Asset> = emptyList(),
     val locationNames: Map<String, String> = emptyMap()
@@ -26,13 +27,18 @@ data class PhotoDetailsUiState(
 
 sealed interface PhotoDetailsIntent {
     data object LoadSimilar : PhotoDetailsIntent
-    data class SetTimeRange(val label: String) : PhotoDetailsIntent
+    data class SetTimeWindow(val timeWindow: TimeWindow) : PhotoDetailsIntent
     data class ApplyLocationFrom(val source: Asset) : PhotoDetailsIntent
 }
 
 sealed interface PhotoDetailsEvent {
     data object Saved : PhotoDetailsEvent
-    data class Error(val message: String) : PhotoDetailsEvent
+    data class Error(val reason: PhotoDetailsError) : PhotoDetailsEvent
+}
+
+enum class PhotoDetailsError {
+    MissingSourceLocation,
+    WriteFailed
 }
 
 class PhotoDetailsViewModel(
@@ -57,13 +63,13 @@ class PhotoDetailsViewModel(
     fun onIntent(intent: PhotoDetailsIntent) {
         when (intent) {
             PhotoDetailsIntent.LoadSimilar -> loadSimilar()
-            is PhotoDetailsIntent.SetTimeRange -> setTimeRange(intent.label)
+            is PhotoDetailsIntent.SetTimeWindow -> setTimeWindow(intent.timeWindow)
             is PhotoDetailsIntent.ApplyLocationFrom -> applyLocationFrom(intent.source)
         }
     }
 
-    fun setTimeRange(label: String) {
-        _uiState.update { it.copy(timeRange = label) }
+    fun setTimeWindow(timeWindow: TimeWindow) {
+        _uiState.update { it.copy(timeWindow = timeWindow) }
         loadSimilar()
     }
 
@@ -71,7 +77,7 @@ class PhotoDetailsViewModel(
         scope.launch {
             _uiState.update { it.copy(loading = true) }
             try {
-                val currentRange = _uiState.value.timeRange
+                val currentRange = _uiState.value.timeWindow
                 val list = sim.findByTimeAndGps(photo, getTimeRangeDuration(currentRange))
 
                 val names = mutableMapOf<String, String>()
@@ -94,7 +100,7 @@ class PhotoDetailsViewModel(
         scope.launch {
             val pair = exif.getLatLon(src)
             if (pair == null) {
-                _events.tryEmit(PhotoDetailsEvent.Error("Location konnte nicht übernommen werden."))
+                _events.tryEmit(PhotoDetailsEvent.Error(PhotoDetailsError.MissingSourceLocation))
                 return@launch
             }
 
@@ -102,7 +108,7 @@ class PhotoDetailsViewModel(
             if (ok) {
                 _events.tryEmit(PhotoDetailsEvent.Saved)
             } else {
-                _events.tryEmit(PhotoDetailsEvent.Error("Location konnte nicht übernommen werden."))
+                _events.tryEmit(PhotoDetailsEvent.Error(PhotoDetailsError.WriteFailed))
             }
         }
     }

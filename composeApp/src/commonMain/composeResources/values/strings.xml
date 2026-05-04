@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="photos_without_location_title">Photos without location</string>
+    <string name="photos_without_location_count">%1$d photos without location</string>
+    <string name="photos_without_location_count_loading">%1$d photos without location · scanning</string>
+    <string name="missing_location_badge">No location</string>
+    <string name="details_title">Photo details</string>
+    <string name="similar_photos_title">Similar photos with location</string>
+    <string name="no_similar_photos">No similar photos found</string>
+    <string name="unknown_location">Unknown location</string>
+    <string name="metadata_date">Date</string>
+    <string name="metadata_time">Time</string>
+    <string name="metadata_file">File</string>
+    <string name="apply">Apply</string>
+    <string name="time_window_one_hour">1 hr</string>
+    <string name="time_window_four_hours">4 hrs</string>
+    <string name="time_window_twelve_hours">12 hrs</string>
+    <string name="minutes_away">%1$d min away</string>
+    <string name="hours_away">%1$d hr away</string>
+    <string name="hours_minutes_away">%1$d hr %2$d min away</string>
+    <string name="delete_photo_title">Delete photo?</string>
+    <string name="delete_photo_message">Do you really want to delete this photo?</string>
+    <string name="delete">Delete</string>
+    <string name="cancel">Cancel</string>
+    <string name="error_title">Error</string>
+    <string name="ok">OK</string>
+    <string name="delete_failed">Delete failed. Permission may be missing.</string>
+    <string name="apply_location_title">Apply location?</string>
+    <string name="apply_location_message">Do you want to apply the location from “%1$s” to the current photo?</string>
+    <string name="apply_location_failed">Location could not be applied.</string>
+</resources>
