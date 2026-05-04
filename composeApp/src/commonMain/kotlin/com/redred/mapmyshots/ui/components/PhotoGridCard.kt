@@ -21,9 +21,11 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.dp
 import com.redred.mapmyshots.model.Asset
 import com.redred.mapmyshots.ui.AssetThumbnail
 import com.redred.mapmyshots.ui.theme.*
@@ -43,13 +45,15 @@ internal fun PhotoGridCard(
     ElevatedCard(
         modifier = Modifier
             .fillMaxWidth()
+            .shadow(elevation = 4.dp, shape = cardShape)
             .clip(cardShape)
             .combinedClickable(
                 onClick = onClick,
                 onLongClick = onLongClick
             ),
         shape = cardShape,
-        colors = CardDefaults.elevatedCardColors(containerColor = MapMyShotsColors.surface)
+        colors = CardDefaults.elevatedCardColors(containerColor = MapMyShotsColors.surface),
+        elevation = CardDefaults.elevatedCardElevation(defaultElevation = 0.dp)
     ) {
         Box {
             AssetThumbnail(
@@ -63,13 +67,13 @@ internal fun PhotoGridCard(
                 text = stringResource(Res.string.missing_location_badge),
                 modifier = Modifier
                     .align(Alignment.TopStart)
-                    .padding(MapMyShotsSpacing.md)
+                    .padding(MapMyShotsSpacing.xs)
             )
         }
 
         Text(
             text = "${formatDate(photo.takenAt)} · ${formatTime(photo.takenAt)}",
-            modifier = Modifier.padding(horizontal = MapMyShotsSpacing.xl, vertical = MapMyShotsSpacing.lg),
+            modifier = Modifier.padding(horizontal = MapMyShotsSpacing.sm, vertical = MapMyShotsSpacing.sm),
             fontSize = MapMyShotsTypography.cardDate,
             color = MapMyShotsColors.textSecondary,
             maxLines = 1,

@@ -5,13 +5,12 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyGridState
 import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.grid.rememberLazyGridState
-import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
@@ -36,7 +35,7 @@ import kotlin.time.Instant
 
 @Composable
 internal fun PhotoListScreenContent(
-    listState: LazyListState,
+    gridState: LazyGridState,
     isLoading: Boolean,
     isLoadingMore: Boolean,
     progress: LoadProgress,
@@ -45,9 +44,6 @@ internal fun PhotoListScreenContent(
     onLoadMore: () -> Unit,
     onLongPress: (Asset) -> Unit
 ) {
-    @Suppress("UNUSED_VARIABLE")
-    val retainedListState = listState
-    val gridState = rememberLazyGridState()
     val latestLoading by rememberUpdatedState(isLoading)
     val latestLoadingMore by rememberUpdatedState(isLoadingMore)
     val visiblePhotos = remember(photos) { photos }
@@ -132,7 +128,7 @@ private fun PhotoListScreenContentPreview() {
 
     MaterialTheme {
         PhotoListScreenContent(
-            listState = rememberLazyListState(),
+            gridState = rememberLazyGridState(),
             isLoading = false,
             isLoadingMore = false,
             progress = LoadProgress(scanned = 120, total = 120, found = assets.size, active = false),

@@ -28,7 +28,7 @@ internal fun StatusBadge(
         modifier = modifier
             .clip(MapMyShotsShapes.pill)
             .background(MapMyShotsColors.badgeBackground)
-            .padding(horizontal = MapMyShotsSpacing.md, vertical = MapMyShotsSpacing.xs),
+            .padding(horizontal = MapMyShotsSpacing.sm, vertical = MapMyShotsSpacing.xxs),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Icon(
@@ -41,7 +41,7 @@ internal fun StatusBadge(
 
         Text(
             text = text,
-            fontSize = MapMyShotsTypography.badge,
+            fontSize = MapMyShotsTypography.caption,
             fontWeight = FontWeight.SemiBold,
             color = MapMyShotsColors.onImage
         )

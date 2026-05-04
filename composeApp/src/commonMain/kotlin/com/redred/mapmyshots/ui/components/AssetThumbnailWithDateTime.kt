@@ -10,9 +10,12 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.dp
 import com.redred.mapmyshots.model.Asset
 import com.redred.mapmyshots.ui.AssetThumbnail
 import com.redred.mapmyshots.ui.theme.*
@@ -22,7 +25,13 @@ internal fun AssetThumbnailWithDateTime(
     asset: Asset,
     modifier: Modifier = Modifier
 ) {
-    Box(modifier = modifier) {
+    val shape = MapMyShotsShapes.hero
+
+    Box(
+        modifier = modifier
+            .shadow(elevation = 2.dp, shape = shape)
+            .clip(shape)
+    ) {
         AssetThumbnail(
             asset = asset,
             modifier = Modifier.fillMaxSize()

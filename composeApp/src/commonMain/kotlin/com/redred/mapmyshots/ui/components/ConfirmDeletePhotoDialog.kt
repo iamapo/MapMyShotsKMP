@@ -6,6 +6,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.tooling.preview.Preview
+import com.redred.mapmyshots.ui.theme.MapMyShotsColors
 import mapmyshots.composeapp.generated.resources.Res
 import mapmyshots.composeapp.generated.resources.cancel
 import mapmyshots.composeapp.generated.resources.delete
@@ -31,7 +32,8 @@ internal fun ConfirmDeletePhotoDialog(
             TextButton(onClick = onDismiss) {
                 Text(stringResource(Res.string.cancel))
             }
-        }
+        },
+        containerColor = MapMyShotsColors.background,
     )
 }
 

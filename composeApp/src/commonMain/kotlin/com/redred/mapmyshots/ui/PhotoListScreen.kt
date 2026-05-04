@@ -1,7 +1,6 @@
 package com.redred.mapmyshots.ui
 
-import androidx.compose.foundation.lazy.LazyListState
-import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.lazy.grid.LazyGridState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -9,6 +8,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import com.redred.mapmyshots.model.Asset
 import com.redred.mapmyshots.ui.components.ConfirmDeletePhotoDialog
@@ -26,7 +26,7 @@ import org.jetbrains.compose.resources.stringResource
 fun PhotoListScreen(
     onOpen: (Asset) -> Unit,
     vm: PhotoListViewModel = koinInject(),
-    listState: LazyListState = rememberLazyListState(),
+    gridState: LazyGridState = rememberSaveable(saver = LazyGridState.Saver) { LazyGridState() },
     clearOnDispose: Boolean = true
 ) {
     DisposableEffect(vm, clearOnDispose) {
@@ -50,7 +50,7 @@ fun PhotoListScreen(
     }
 
     PhotoListScreenContent(
-        listState = listState,
+        gridState = gridState,
         isLoading = uiState.isLoading,
         isLoadingMore = uiState.isLoadingMore,
         progress = uiState.progress,

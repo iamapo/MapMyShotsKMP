@@ -1,11 +1,12 @@
 package com.redred.mapmyshots
 
-import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.lazy.grid.LazyGridState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import com.redred.mapmyshots.model.Asset
 import com.redred.mapmyshots.ui.PhotoDetailsScreen
 import com.redred.mapmyshots.ui.PhotoListScreen
@@ -21,7 +22,7 @@ fun App(
     LaunchedEffect(Unit) { onRequestPermissions?.invoke() }
 
     val listVm: PhotoListViewModel = koinInject()
-    val listState = rememberLazyListState()
+    val gridState = rememberSaveable(saver = LazyGridState.Saver) { LazyGridState() }
 
     DisposableEffect(listVm) {
         onDispose { listVm.clear() }
@@ -34,7 +35,7 @@ fun App(
             PhotoListScreen(
                 onOpen = { asset -> current.value = asset },
                 vm = listVm,
-                listState = listState,
+                gridState = gridState,
                 clearOnDispose = false
             )
         } else {
