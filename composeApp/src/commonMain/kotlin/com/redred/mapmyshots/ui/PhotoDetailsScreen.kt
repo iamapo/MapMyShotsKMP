@@ -10,6 +10,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import com.redred.mapmyshots.model.Asset
 import com.redred.mapmyshots.ui.components.ApplyLocationDialog
+import com.redred.mapmyshots.ui.components.ConfirmDeletePhotoDialog
 import com.redred.mapmyshots.ui.components.ErrorDialog
 import com.redred.mapmyshots.ui.screens.details.PhotoDetailsScreenContent
 import com.redred.mapmyshots.viewmodel.PhotoDetailsEvent
@@ -17,6 +18,7 @@ import com.redred.mapmyshots.viewmodel.PhotoDetailsIntent
 import com.redred.mapmyshots.viewmodel.PhotoDetailsViewModel
 import mapmyshots.composeapp.generated.resources.Res
 import mapmyshots.composeapp.generated.resources.apply_location_failed
+import mapmyshots.composeapp.generated.resources.delete_failed
 import org.koin.compose.koinInject
 import org.koin.core.parameter.parametersOf
 import org.jetbrains.compose.resources.stringResource
@@ -25,6 +27,7 @@ import org.jetbrains.compose.resources.stringResource
 fun PhotoDetailsScreen(
     photo: Asset,
     onSaved: () -> Unit,
+    onDeleted: () -> Unit,
     onBack: () -> Unit
 ) {
     val vm: PhotoDetailsViewModel = koinInject(parameters = { parametersOf(photo) })
@@ -36,7 +39,9 @@ fun PhotoDetailsScreen(
     val uiState by vm.uiState.collectAsState()
     val names = uiState.locationNames
     var pendingApplyFrom by remember { mutableStateOf<Asset?>(null) }
+    var pendingDelete by remember { mutableStateOf(false) }
     var applyError by remember { mutableStateOf<PhotoDetailsEvent.Error?>(null) }
+    var deleteError by remember { mutableStateOf(false) }
 
     LaunchedEffect(photo.id) {
         vm.onIntent(PhotoDetailsIntent.LoadSimilar)
@@ -46,6 +51,8 @@ fun PhotoDetailsScreen(
         vm.events.collect { event ->
             when (event) {
                 PhotoDetailsEvent.Saved -> onSaved()
+                PhotoDetailsEvent.Deleted -> onDeleted()
+                PhotoDetailsEvent.DeleteFailed -> deleteError = true
                 is PhotoDetailsEvent.Error -> applyError = event
             }
         }
@@ -63,8 +70,22 @@ fun PhotoDetailsScreen(
         onAssetClicked = { asset ->
             pendingApplyFrom = asset
         },
+        onDelete = {
+            pendingDelete = true
+        },
         onBack = onBack
     )
+
+    if (pendingDelete) {
+        ConfirmDeletePhotoDialog(
+            onDismiss = { pendingDelete = false },
+            onConfirm = {
+                pendingDelete = false
+                deleteError = false
+                vm.onIntent(PhotoDetailsIntent.Delete)
+            }
+        )
+    }
 
     if (pendingApplyFrom != null) {
         val src = pendingApplyFrom!!
@@ -83,6 +104,13 @@ fun PhotoDetailsScreen(
         ErrorDialog(
             message = stringResource(Res.string.apply_location_failed),
             onDismiss = { applyError = null }
+        )
+    }
+
+    if (deleteError) {
+        ErrorDialog(
+            message = stringResource(Res.string.delete_failed),
+            onDismiss = { deleteError = false }
         )
     }
 }

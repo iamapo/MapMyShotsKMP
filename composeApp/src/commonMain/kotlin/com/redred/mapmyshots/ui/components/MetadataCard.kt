@@ -23,6 +23,34 @@ import org.jetbrains.compose.resources.stringResource
 
 @Composable
 internal fun MetadataCard(photo: Asset) {
+    val rows = buildList {
+        add(
+            MetadataEntry(
+                icon = Icons.Filled.CalendarToday,
+                label = stringResource(Res.string.metadata_date),
+                value = formatDate(photo.takenAt)
+            )
+        )
+        add(
+            MetadataEntry(
+                icon = Icons.Filled.AccessTime,
+                label = stringResource(Res.string.metadata_time),
+                value = formatTime(photo.takenAt)
+            )
+        )
+        photo.displayName
+            ?.takeIf { it.isNotBlank() }
+            ?.let { fileName ->
+                add(
+                    MetadataEntry(
+                        icon = Icons.AutoMirrored.Filled.InsertDriveFile,
+                        label = stringResource(Res.string.metadata_file),
+                        value = fileName
+                    )
+                )
+            }
+    }
+
     ElevatedCard(
         modifier = Modifier.fillMaxWidth(),
         shape = MapMyShotsShapes.metadataCard,
@@ -31,30 +59,25 @@ internal fun MetadataCard(photo: Asset) {
         Column(
             modifier = Modifier.padding(horizontal = MapMyShotsSpacing.screen - MapMyShotsSpacing.xxs, vertical = MapMyShotsSpacing.sm)
         ) {
-            MetadataRow(
-                icon = Icons.Filled.CalendarToday,
-                label = stringResource(Res.string.metadata_date),
-                value = formatDate(photo.takenAt)
-            )
-
-            DividerLight()
-
-            MetadataRow(
-                icon = Icons.Filled.AccessTime,
-                label = stringResource(Res.string.metadata_time),
-                value = formatTime(photo.takenAt)
-            )
-
-            DividerLight()
-
-            MetadataRow(
-                icon = Icons.AutoMirrored.Filled.InsertDriveFile,
-                label = stringResource(Res.string.metadata_file),
-                value = photo.displayName ?: photo.id
-            )
+            rows.forEachIndexed { index, entry ->
+                MetadataRow(
+                    icon = entry.icon,
+                    label = entry.label,
+                    value = entry.value
+                )
+                if (index < rows.lastIndex) {
+                    DividerLight()
+                }
+            }
         }
     }
 }
+
+private data class MetadataEntry(
+    val icon: androidx.compose.ui.graphics.vector.ImageVector,
+    val label: String,
+    val value: String
+)
 
 @Preview
 @Composable

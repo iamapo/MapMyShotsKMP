@@ -4,6 +4,7 @@ import com.redred.mapmyshots.model.Asset
 import com.redred.mapmyshots.model.TimeWindow
 import com.redred.mapmyshots.platform.GeocoderPlatform
 import com.redred.mapmyshots.service.ExifService
+import com.redred.mapmyshots.service.PhotoService
 import com.redred.mapmyshots.service.SimilarityService
 import com.redred.mapmyshots.util.getTimeRangeDuration
 import kotlinx.coroutines.CoroutineScope
@@ -29,10 +30,13 @@ sealed interface PhotoDetailsIntent {
     data object LoadSimilar : PhotoDetailsIntent
     data class SetTimeWindow(val timeWindow: TimeWindow) : PhotoDetailsIntent
     data class ApplyLocationFrom(val source: Asset) : PhotoDetailsIntent
+    data object Delete : PhotoDetailsIntent
 }
 
 sealed interface PhotoDetailsEvent {
     data object Saved : PhotoDetailsEvent
+    data object Deleted : PhotoDetailsEvent
+    data object DeleteFailed : PhotoDetailsEvent
     data class Error(val reason: PhotoDetailsError) : PhotoDetailsEvent
 }
 
@@ -44,6 +48,7 @@ enum class PhotoDetailsError {
 class PhotoDetailsViewModel(
     val photo: Asset,
     private val exif: ExifService,
+    private val photoService: PhotoService,
     private val sim: SimilarityService,
     private val geocoder: GeocoderPlatform,
 ) {
@@ -65,6 +70,7 @@ class PhotoDetailsViewModel(
             PhotoDetailsIntent.LoadSimilar -> loadSimilar()
             is PhotoDetailsIntent.SetTimeWindow -> setTimeWindow(intent.timeWindow)
             is PhotoDetailsIntent.ApplyLocationFrom -> applyLocationFrom(intent.source)
+            PhotoDetailsIntent.Delete -> delete()
         }
     }
 
@@ -109,6 +115,17 @@ class PhotoDetailsViewModel(
                 _events.tryEmit(PhotoDetailsEvent.Saved)
             } else {
                 _events.tryEmit(PhotoDetailsEvent.Error(PhotoDetailsError.WriteFailed))
+            }
+        }
+    }
+
+    fun delete() {
+        scope.launch {
+            val ok = photoService.deleteAsset(photo)
+            if (ok) {
+                _events.tryEmit(PhotoDetailsEvent.Deleted)
+            } else {
+                _events.tryEmit(PhotoDetailsEvent.DeleteFailed)
             }
         }
     }

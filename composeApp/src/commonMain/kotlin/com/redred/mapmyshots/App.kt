@@ -45,6 +45,10 @@ fun App(
                     listVm.onIntent(PhotoListIntent.RemoveFromList(selectedPhoto.id))
                     current.value = null
                 },
+                onDeleted = {
+                    listVm.onIntent(PhotoListIntent.RemoveFromList(selectedPhoto.id))
+                    current.value = null
+                },
                 onBack = { current.value = null }
             )
         }

@@ -47,6 +47,7 @@ internal fun PhotoDetailsScreenContent(
     names: Map<String, String>,
     onTimeWindowSelected: (TimeWindow) -> Unit,
     onAssetClicked: (Asset) -> Unit,
+    onDelete: () -> Unit,
     onBack: () -> Unit
 ) {
     LazyColumn(
@@ -57,7 +58,10 @@ internal fun PhotoDetailsScreenContent(
         verticalArrangement = Arrangement.spacedBy(MapMyShotsSpacing.screen - MapMyShotsSpacing.xxs)
     ) {
         item {
-            DetailTopBar(onBack = onBack)
+            DetailTopBar(
+                onBack = onBack,
+                onDelete = onDelete
+            )
         }
 
         item {
@@ -163,6 +167,7 @@ private fun PhotoDetailsScreenContentPreview() {
             ),
             onTimeWindowSelected = {},
             onAssetClicked = {},
+            onDelete = {},
             onBack = {}
         )
     }

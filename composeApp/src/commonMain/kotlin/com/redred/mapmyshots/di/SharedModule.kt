@@ -18,6 +18,7 @@ val sharedModule = module {
         PhotoDetailsViewModel(
             photo = photo,
             exif = get(),
+            photoService = get(),
             sim = get(),
             geocoder = get()
         )
