@@ -1,4 +1,5 @@
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
+import org.jetbrains.compose.desktop.application.dsl.TargetFormat
 
 plugins {
     alias(libs.plugins.kotlinMultiplatform)
@@ -13,6 +14,8 @@ kotlin {
             jvmTarget.set(JvmTarget.JVM_11)
         }
     }
+
+    jvm("desktop")
     
     listOf(
         iosArm64(),
@@ -44,12 +47,28 @@ kotlin {
             implementation(libs.kotlinx.datetime)
             implementation(libs.koin.core)
             implementation(libs.koin.compose)
-            implementation(libs.accompanist.flowlayout)
             implementation(libs.material.icons.extended)
 
         }
         commonTest.dependencies {
             implementation(libs.kotlin.test)
+        }
+        val desktopMain by getting {
+            dependencies {
+                implementation(compose.desktop.currentOs)
+            }
+        }
+    }
+}
+
+compose.desktop {
+    application {
+        mainClass = "com.redred.mapmyshots.MainKt"
+
+        nativeDistributions {
+            targetFormats(TargetFormat.Dmg)
+            packageName = "MapMyShots"
+            packageVersion = "1.0.0"
         }
     }
 }
@@ -84,4 +103,3 @@ android {
 dependencies {
     debugImplementation(compose.uiTooling)
 }
-
