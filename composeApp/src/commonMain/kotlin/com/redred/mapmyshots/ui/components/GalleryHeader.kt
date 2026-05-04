@@ -56,10 +56,6 @@ internal fun GalleryHeader(
                 color = MapMyShotsColors.textMuted
             )
         }
-
-        IconTextButton(Icons.Filled.Search)
-        Spacer(Modifier.width(MapMyShotsSpacing.md))
-        IconTextButton(Icons.Filled.ViewModule)
     }
 }
 

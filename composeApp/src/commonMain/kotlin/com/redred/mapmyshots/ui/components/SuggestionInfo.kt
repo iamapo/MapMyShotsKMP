@@ -42,25 +42,25 @@ internal fun SuggestionInfo(
 
             Spacer(Modifier.width(MapMyShotsSpacing.sm))
 
-            Text(
-                text = place,
-                fontSize = MapMyShotsTypography.suggestionTitle,
-                fontWeight = FontWeight.SemiBold,
-                color = MapMyShotsColors.textPrimary,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
-            )
+            Column {
+                Text(
+                    text = place,
+                    fontSize = MapMyShotsTypography.suggestionTitle,
+                    fontWeight = FontWeight.SemiBold,
+                    color = MapMyShotsColors.textPrimary,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+                Text(
+                    text = "${formatDate(suggestion.takenAt)} · ${formatTime(suggestion.takenAt)} · ${formatDistanceText(photo, suggestion)}",
+                    fontSize = MapMyShotsTypography.badge,
+                    color = MapMyShotsColors.textSecondary,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+
+            }
         }
-
-        Spacer(Modifier.height(MapMyShotsSpacing.sm))
-
-        Text(
-            text = "${formatDate(suggestion.takenAt)} · ${formatTime(suggestion.takenAt)} · ${formatDistanceText(photo, suggestion)}",
-            fontSize = MapMyShotsTypography.badge,
-            color = MapMyShotsColors.textSecondary,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis
-        )
     }
 }
 

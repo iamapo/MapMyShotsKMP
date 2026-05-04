@@ -46,10 +46,6 @@ internal fun SuggestionCard(
                 place = place,
                 modifier = Modifier.weight(1f)
             )
-
-            Spacer(Modifier.width(MapMyShotsSpacing.sm))
-
-            SuggestionApplyAction()
         }
     }
 }

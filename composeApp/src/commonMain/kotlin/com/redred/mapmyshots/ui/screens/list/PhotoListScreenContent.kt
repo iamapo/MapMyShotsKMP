@@ -93,7 +93,6 @@ internal fun PhotoListScreenContent(
             items(visiblePhotos, key = { it.id }) { photo ->
                 PhotoGridCard(
                     photo = photo,
-                    selected = photo.id == visiblePhotos.firstOrNull()?.id,
                     onClick = { onOpen(photo) },
                     onLongClick = { onLongPress(photo) }
                 )

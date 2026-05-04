@@ -35,29 +35,20 @@ import org.jetbrains.compose.resources.stringResource
 @Composable
 internal fun PhotoGridCard(
     photo: Asset,
-    selected: Boolean,
     onClick: () -> Unit,
     onLongClick: () -> Unit
 ) {
+    val cardShape = MapMyShotsShapes.card
+
     ElevatedCard(
         modifier = Modifier
             .fillMaxWidth()
+            .clip(cardShape)
             .combinedClickable(
                 onClick = onClick,
                 onLongClick = onLongClick
-            )
-            .then(
-                if (selected) {
-                    Modifier.border(
-                        width = MapMyShotsStroke.selected,
-                        color = MapMyShotsColors.primary,
-                        shape = MapMyShotsShapes.card
-                    )
-                } else {
-                    Modifier
-                }
             ),
-        shape = MapMyShotsShapes.card,
+        shape = cardShape,
         colors = CardDefaults.elevatedCardColors(containerColor = MapMyShotsColors.surface)
     ) {
         Box {
@@ -74,24 +65,6 @@ internal fun PhotoGridCard(
                     .align(Alignment.TopStart)
                     .padding(MapMyShotsSpacing.md)
             )
-
-            if (selected) {
-                Box(
-                    modifier = Modifier
-                        .align(Alignment.TopEnd)
-                        .padding(MapMyShotsSpacing.md)
-                        .size(MapMyShotsSizes.selectedBadge)
-                        .clip(CircleShape)
-                        .background(MapMyShotsColors.primary),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(
-                        imageVector = Icons.Filled.Check,
-                        contentDescription = null,
-                        tint = MapMyShotsColors.onImage
-                    )
-                }
-            }
         }
 
         Text(
@@ -111,7 +84,6 @@ private fun PhotoGridCardPreview() {
     MaterialTheme {
         PhotoGridCard(
             photo = previewAsset(),
-            selected = true,
             onClick = {},
             onLongClick = {}
         )
