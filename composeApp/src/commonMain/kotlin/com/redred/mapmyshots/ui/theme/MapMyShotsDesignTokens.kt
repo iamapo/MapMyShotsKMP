@@ -9,6 +9,7 @@ internal object MapMyShotsColors {
     val primary = Color(0xFF0B63E5)
     val background = Color(0xFFF8FAFD)
     val surface = Color.White
+    val surfaceSelected = primary.copy(alpha = 0.06f)
     val transparent = Color.Transparent
     val onImage = Color.White
     val textPrimary = Color(0xFF101828)

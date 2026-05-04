@@ -4,6 +4,7 @@
     <string name="photos_without_location_count">%1$d photos without location</string>
     <string name="photos_without_location_count_loading">%1$d photos without location · scanning</string>
     <string name="missing_location_badge">No location</string>
+    <string name="location_set_badge">Location set</string>
     <string name="details_title">Photo details</string>
     <string name="similar_photos_title">Similar photos with location</string>
     <string name="no_similar_photos">No similar photos found</string>
@@ -11,7 +12,9 @@
     <string name="metadata_date">Date</string>
     <string name="metadata_time">Time</string>
     <string name="metadata_file">File</string>
+    <string name="metadata_location">Location</string>
     <string name="apply">Apply</string>
+    <string name="applied">Applied</string>
     <string name="time_window_one_hour">1 hr</string>
     <string name="time_window_four_hours">4 hrs</string>
     <string name="time_window_twelve_hours">12 hrs</string>
@@ -28,4 +31,5 @@
     <string name="apply_location_title">Apply location?</string>
     <string name="apply_location_message">Do you want to apply the location from “%1$s” to the current photo?</string>
     <string name="apply_location_failed">Location could not be applied.</string>
+    <string name="apply_location_success">Location successfully applied.</string>
 </resources>

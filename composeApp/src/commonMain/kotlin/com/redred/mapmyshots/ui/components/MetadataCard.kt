@@ -7,6 +7,7 @@ import androidx.compose.material.icons.automirrored.filled.InsertDriveFile
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AccessTime
 import androidx.compose.material.icons.filled.CalendarToday
+import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.MaterialTheme
@@ -18,11 +19,15 @@ import com.redred.mapmyshots.ui.theme.*
 import mapmyshots.composeapp.generated.resources.Res
 import mapmyshots.composeapp.generated.resources.metadata_date
 import mapmyshots.composeapp.generated.resources.metadata_file
+import mapmyshots.composeapp.generated.resources.metadata_location
 import mapmyshots.composeapp.generated.resources.metadata_time
 import org.jetbrains.compose.resources.stringResource
 
 @Composable
-internal fun MetadataCard(photo: Asset) {
+internal fun MetadataCard(
+    photo: Asset,
+    locationName: String? = null
+) {
     val rows = buildList {
         add(
             MetadataEntry(
@@ -38,6 +43,17 @@ internal fun MetadataCard(photo: Asset) {
                 value = formatTime(photo.takenAt)
             )
         )
+        locationName
+            ?.takeIf { it.isNotBlank() }
+            ?.let { resolvedLocation ->
+                add(
+                    MetadataEntry(
+                        icon = Icons.Filled.LocationOn,
+                        label = stringResource(Res.string.metadata_location),
+                        value = resolvedLocation
+                    )
+                )
+            }
         photo.displayName
             ?.takeIf { it.isNotBlank() }
             ?.let { fileName ->

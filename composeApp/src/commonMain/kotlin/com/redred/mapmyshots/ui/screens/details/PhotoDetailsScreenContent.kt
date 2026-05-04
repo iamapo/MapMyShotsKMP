@@ -28,9 +28,12 @@ import com.redred.mapmyshots.ui.components.MetadataCard
 import com.redred.mapmyshots.ui.components.SimilarPhotosEmptyState
 import com.redred.mapmyshots.ui.components.StatusBadge
 import com.redred.mapmyshots.ui.components.SuggestionCard
+import com.redred.mapmyshots.ui.components.SuccessBanner
 import com.redred.mapmyshots.ui.components.TimeWindowSelector
 import com.redred.mapmyshots.ui.theme.*
 import mapmyshots.composeapp.generated.resources.Res
+import mapmyshots.composeapp.generated.resources.apply_location_success
+import mapmyshots.composeapp.generated.resources.location_set_badge
 import mapmyshots.composeapp.generated.resources.missing_location_badge
 import mapmyshots.composeapp.generated.resources.similar_photos_title
 import mapmyshots.composeapp.generated.resources.unknown_location
@@ -45,6 +48,10 @@ internal fun PhotoDetailsScreenContent(
     loading: Boolean,
     similar: List<Asset>,
     names: Map<String, String>,
+    hasLocation: Boolean,
+    currentLocationName: String?,
+    showApplySuccess: Boolean,
+    appliedSuggestionId: String?,
     onTimeWindowSelected: (TimeWindow) -> Unit,
     onAssetClicked: (Asset) -> Unit,
     onDelete: () -> Unit,
@@ -75,7 +82,10 @@ internal fun PhotoDetailsScreenContent(
                 )
 
                 StatusBadge(
-                    text = stringResource(Res.string.missing_location_badge),
+                    text = stringResource(
+                        if (hasLocation) Res.string.location_set_badge else Res.string.missing_location_badge
+                    ),
+                    success = hasLocation,
                     modifier = Modifier
                         .align(Alignment.TopStart)
                         .padding(MapMyShotsSpacing.xl)
@@ -83,8 +93,17 @@ internal fun PhotoDetailsScreenContent(
             }
         }
 
+        if (showApplySuccess) {
+            item {
+                SuccessBanner(text = stringResource(Res.string.apply_location_success))
+            }
+        }
+
         item {
-            MetadataCard(photo = photo)
+            MetadataCard(
+                photo = photo,
+                locationName = currentLocationName
+            )
         }
 
         item {
@@ -115,6 +134,7 @@ internal fun PhotoDetailsScreenContent(
                     place = names[asset.id].orEmpty().ifBlank {
                         asset.displayName ?: stringResource(Res.string.unknown_location)
                     },
+                    isApplied = appliedSuggestionId == asset.id,
                     onClick = { onAssetClicked(asset) }
                 )
             }
@@ -165,6 +185,57 @@ private fun PhotoDetailsScreenContentPreview() {
                 "preview_sim_1" to "Berlin, Germany",
                 "preview_sim_2" to "Potsdam, Germany"
             ),
+            hasLocation = false,
+            currentLocationName = "",
+            showApplySuccess = false,
+            appliedSuggestionId = "",
+            onTimeWindowSelected = {},
+            onAssetClicked = {},
+            onDelete = {},
+            onBack = {}
+        )
+    }
+}
+
+@OptIn(ExperimentalTime::class)
+@Preview
+@Composable
+private fun PhotoDetailsScreenContentNewLocationPreview() {
+    val current = Asset(
+        id = "preview_current",
+        displayName = "IMG_CURRENT",
+        takenAt = Instant.fromEpochMilliseconds(1761472800000),
+        uri = "content://preview/current"
+    )
+    val similar = listOf(
+        Asset(
+            id = "preview_sim_1",
+            displayName = "IMG_SIM_1",
+            takenAt = Instant.fromEpochMilliseconds(1761469200000),
+            uri = "content://preview/sim_1"
+        ),
+        Asset(
+            id = "preview_sim_2",
+            displayName = "IMG_SIM_2",
+            takenAt = Instant.fromEpochMilliseconds(1761465600000),
+            uri = "content://preview/sim_2"
+        )
+    )
+
+    MaterialTheme {
+        PhotoDetailsScreenContent(
+            photo = current,
+            timeWindow = TimeWindow.OneHour,
+            loading = false,
+            similar = similar,
+            names = mapOf(
+                "preview_sim_1" to "Berlin, Germany",
+                "preview_sim_2" to "Potsdam, Germany"
+            ),
+            hasLocation = true,
+            currentLocationName = "Berlin, Germany",
+            showApplySuccess = true,
+            appliedSuggestionId = "preview_sim_1",
             onTimeWindowSelected = {},
             onAssetClicked = {},
             onDelete = {},

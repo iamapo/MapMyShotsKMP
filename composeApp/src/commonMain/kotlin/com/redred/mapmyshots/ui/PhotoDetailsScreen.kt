@@ -26,7 +26,7 @@ import org.jetbrains.compose.resources.stringResource
 @Composable
 fun PhotoDetailsScreen(
     photo: Asset,
-    onSaved: () -> Unit,
+    onLocationApplied: () -> Unit,
     onDeleted: () -> Unit,
     onBack: () -> Unit
 ) {
@@ -39,9 +39,14 @@ fun PhotoDetailsScreen(
     val uiState by vm.uiState.collectAsState()
     val names = uiState.locationNames
     var pendingApplyFrom by remember { mutableStateOf<Asset?>(null) }
+    var applyingFrom by remember { mutableStateOf<Asset?>(null) }
     var pendingDelete by remember { mutableStateOf(false) }
     var applyError by remember { mutableStateOf<PhotoDetailsEvent.Error?>(null) }
     var deleteError by remember { mutableStateOf(false) }
+    var hasLocation by remember(photo.id) { mutableStateOf(photo.hasLocation == true) }
+    var currentLocationName by remember(photo.id) { mutableStateOf<String?>(null) }
+    var showApplySuccess by remember(photo.id) { mutableStateOf(false) }
+    var appliedSuggestionId by remember(photo.id) { mutableStateOf<String?>(null) }
 
     LaunchedEffect(photo.id) {
         vm.onIntent(PhotoDetailsIntent.LoadSimilar)
@@ -50,10 +55,26 @@ fun PhotoDetailsScreen(
     LaunchedEffect(vm) {
         vm.events.collect { event ->
             when (event) {
-                PhotoDetailsEvent.Saved -> onSaved()
+                PhotoDetailsEvent.Saved -> {
+                    val source = applyingFrom
+                    hasLocation = true
+                    showApplySuccess = true
+                    appliedSuggestionId = source?.id
+                    currentLocationName = source?.let { asset ->
+                        names[asset.id].orEmpty().ifBlank { asset.displayName ?: asset.id }
+                    }
+                    applyingFrom = null
+                    onLocationApplied()
+                }
                 PhotoDetailsEvent.Deleted -> onDeleted()
-                PhotoDetailsEvent.DeleteFailed -> deleteError = true
-                is PhotoDetailsEvent.Error -> applyError = event
+                PhotoDetailsEvent.DeleteFailed -> {
+                    applyingFrom = null
+                    deleteError = true
+                }
+                is PhotoDetailsEvent.Error -> {
+                    applyingFrom = null
+                    applyError = event
+                }
             }
         }
     }
@@ -64,6 +85,10 @@ fun PhotoDetailsScreen(
         loading = uiState.loading,
         similar = uiState.similar,
         names = names,
+        hasLocation = hasLocation,
+        currentLocationName = currentLocationName,
+        showApplySuccess = showApplySuccess,
+        appliedSuggestionId = appliedSuggestionId,
         onTimeWindowSelected = { timeWindow ->
             vm.onIntent(PhotoDetailsIntent.SetTimeWindow(timeWindow))
         },
@@ -95,6 +120,8 @@ fun PhotoDetailsScreen(
             onConfirm = {
                 pendingApplyFrom = null
                 applyError = null
+                showApplySuccess = false
+                applyingFrom = src
                 vm.onIntent(PhotoDetailsIntent.ApplyLocationFrom(src))
             }
         )

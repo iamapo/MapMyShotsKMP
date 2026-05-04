@@ -1,6 +1,7 @@
 package com.redred.mapmyshots.ui.components
 
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -21,14 +22,32 @@ internal fun SuggestionCard(
     photo: Asset,
     suggestion: Asset,
     place: String,
+    isApplied: Boolean = false,
     onClick: () -> Unit
 ) {
     ElevatedCard(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable(onClick = onClick),
+            .then(
+                if (isApplied) {
+                    Modifier.border(
+                        width = MapMyShotsStroke.selected,
+                        color = MapMyShotsColors.primary,
+                        shape = MapMyShotsShapes.card
+                    )
+                } else {
+                    Modifier
+                }
+            )
+            .clickable(enabled = !isApplied, onClick = onClick),
         shape = MapMyShotsShapes.card,
-        colors = CardDefaults.elevatedCardColors(containerColor = MapMyShotsColors.surface)
+        colors = CardDefaults.elevatedCardColors(
+            containerColor = if (isApplied) {
+                MapMyShotsColors.surfaceSelected
+            } else {
+                MapMyShotsColors.surface
+            }
+        )
     ) {
         Row(
             modifier = Modifier
@@ -46,6 +65,10 @@ internal fun SuggestionCard(
                 place = place,
                 modifier = Modifier.weight(1f)
             )
+
+            if (isApplied) {
+                SuggestionApplyAction(applied = true)
+            }
         }
     }
 }
@@ -58,6 +81,7 @@ private fun SuggestionCardPreview() {
             photo = previewAsset(),
             suggestion = previewSuggestionAsset(),
             place = "Munich · Marienplatz",
+            isApplied = true,
             onClick = {}
         )
     }
