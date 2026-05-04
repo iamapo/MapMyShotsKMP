@@ -19,6 +19,7 @@ import com.redred.mapmyshots.viewmodel.PhotoListIntent
 import com.redred.mapmyshots.viewmodel.PhotoListViewModel
 import mapmyshots.composeapp.generated.resources.Res
 import mapmyshots.composeapp.generated.resources.delete_failed
+import mapmyshots.composeapp.generated.resources.load_failed
 import org.koin.compose.koinInject
 import org.jetbrains.compose.resources.stringResource
 
@@ -37,14 +38,18 @@ fun PhotoListScreen(
     LaunchedEffect(Unit) { vm.onIntent(PhotoListIntent.LoadFirstPage) }
 
     val uiState by vm.uiState.collectAsState()
+    val deleteFailedMessage = stringResource(Res.string.delete_failed)
+    val loadFailedMessage = stringResource(Res.string.load_failed)
     var pendingDelete by remember { mutableStateOf<Asset?>(null) }
-    var deleteError by remember { mutableStateOf(false) }
+    var errorMessage by remember { mutableStateOf<String?>(null) }
 
     LaunchedEffect(vm) {
         vm.events.collect { event ->
             when (event) {
                 PhotoListEvent.DeleteFailed ->
-                    deleteError = true
+                    errorMessage = deleteFailedMessage
+                PhotoListEvent.LoadFailed ->
+                    errorMessage = loadFailedMessage
             }
         }
     }
@@ -71,10 +76,10 @@ fun PhotoListScreen(
         )
     }
 
-    if (deleteError) {
+    if (errorMessage != null) {
         ErrorDialog(
-            message = stringResource(Res.string.delete_failed),
-            onDismiss = { deleteError = false }
+            message = errorMessage!!,
+            onDismiss = { errorMessage = null }
         )
     }
 }

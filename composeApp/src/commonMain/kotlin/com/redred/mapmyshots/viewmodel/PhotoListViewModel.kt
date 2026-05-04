@@ -2,6 +2,7 @@ package com.redred.mapmyshots.viewmodel
 
 import com.redred.mapmyshots.model.Asset
 import com.redred.mapmyshots.service.PhotoService
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -37,6 +38,7 @@ sealed interface PhotoListIntent {
 
 sealed interface PhotoListEvent {
     data object DeleteFailed : PhotoListEvent
+    data object LoadFailed : PhotoListEvent
 }
 
 class PhotoListViewModel(private val service: PhotoService) {
@@ -78,13 +80,14 @@ class PhotoListViewModel(private val service: PhotoService) {
         scope.launch {
             var first = true
             while (!endReached && _uiState.value.photos.size < minInitialHits) {
-                loadChunk(reset = first)
+                val loaded = loadChunk(reset = first)
+                if (!loaded) break
                 first = false
             }
         }
     }
 
-    private suspend fun loadChunk(reset: Boolean) {
+    private suspend fun loadChunk(reset: Boolean): Boolean {
         _uiState.update { state ->
             state.copy(
                 isLoading = if (reset) true else state.isLoading,
@@ -126,6 +129,12 @@ class PhotoListViewModel(private val service: PhotoService) {
                     state.copy(photos = state.photos + delta.newHits)
                 }
             }
+            return true
+        } catch (error: CancellationException) {
+            throw error
+        } catch (_: Throwable) {
+            _events.tryEmit(PhotoListEvent.LoadFailed)
+            return false
         } finally {
             _uiState.update { state ->
                 state.copy(

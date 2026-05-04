@@ -16,7 +16,6 @@ import kotlinx.coroutines.withTimeout
 import kotlinx.coroutines.yield
 import kotlin.test.Test
 import kotlin.test.assertEquals
-import kotlin.test.assertTrue
 import kotlin.time.Duration.Companion.hours
 import kotlin.time.ExperimentalTime
 import kotlin.time.Instant
@@ -88,9 +87,38 @@ class PhotoDetailsViewModelTest {
         vm.clear()
     }
 
+    @Test
+    fun latestSimilarLoadWinsWhenTimeWindowChangesQuickly() = runBlocking {
+        val target = asset("target", 100.hours.inWholeMilliseconds)
+        val oneHourCandidate = asset("one-hour", 100.hours.inWholeMilliseconds + 1_000, hasLocation = true)
+        val fourHourCandidate = asset("four-hour", 100.hours.inWholeMilliseconds + 2_000, hasLocation = true)
+        val repo = DelayedSimilarityRepository(
+            target = target,
+            oneHourResult = listOf(oneHourCandidate),
+            fourHourResult = listOf(fourHourCandidate)
+        )
+        val exif = FakeExifPlatform(
+            latLon = mapOf(
+                oneHourCandidate.id to (48.1 to 11.6),
+                fourHourCandidate.id to (48.2 to 11.7)
+            )
+        )
+        val vm = viewModel(target, repo, exif)
+
+        vm.onIntent(PhotoDetailsIntent.LoadSimilar)
+        delay(20)
+        vm.onIntent(PhotoDetailsIntent.SetTimeWindow(TimeWindow.FourHours))
+        waitUntil { !vm.uiState.value.loading }
+
+        assertEquals(TimeWindow.FourHours, vm.uiState.value.timeWindow)
+        assertEquals(listOf(fourHourCandidate), vm.uiState.value.similar)
+
+        vm.clear()
+    }
+
     private fun viewModel(
         target: Asset,
-        repo: RecordingPhotoRepository,
+        repo: PhotoRepository,
         exifPlatform: FakeExifPlatform
     ): PhotoDetailsViewModel {
         val exif = ExifService(exifPlatform)
@@ -127,6 +155,31 @@ class PhotoDetailsViewModelTest {
             hasLocation = hasLocation
         )
     }
+}
+
+private class DelayedSimilarityRepository(
+    private val target: Asset,
+    private val oneHourResult: List<Asset>,
+    private val fourHourResult: List<Asset>
+) : PhotoRepository {
+    override suspend fun listImagesPage(offset: Int, limit: Int): AssetPage {
+        return AssetPage(emptyList(), endReached = true)
+    }
+
+    override suspend fun listAllImages(limitPerAlbum: Int): List<Asset> = emptyList()
+
+    override suspend fun listImagesBetween(min: Instant, max: Instant): List<Asset> {
+        val radius = target.takenAt.toEpochMilliseconds() - min.toEpochMilliseconds()
+        return if (radius == 1.hours.inWholeMilliseconds) {
+            delay(200)
+            oneHourResult
+        } else {
+            delay(10)
+            fourHourResult
+        }
+    }
+
+    override suspend fun deleteAsset(asset: Asset): Boolean = true
 }
 
 private data class Window(

@@ -25,6 +25,7 @@
     <string name="error_title">Error</string>
     <string name="ok">OK</string>
     <string name="delete_failed">Delete failed. Permission may be missing.</string>
+    <string name="load_failed">Photos could not be loaded.</string>
     <string name="apply_location_title">Apply location?</string>
     <string name="apply_location_message">Do you want to apply the location from “%1$s” to the current photo?</string>
     <string name="apply_location_failed">Location could not be applied.</string>
