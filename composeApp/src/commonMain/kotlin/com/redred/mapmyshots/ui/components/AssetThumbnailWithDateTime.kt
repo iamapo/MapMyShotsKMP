@@ -41,17 +41,6 @@ internal fun AssetThumbnailWithDateTime(
                 .fillMaxSize()
                 .background(MapMyShotsColors.imageOverlay)
         )
-        Text(
-            text = asset.displayName ?: formatTakenAt(asset.takenAt),
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-            modifier = Modifier
-                .align(Alignment.BottomStart)
-                .padding(MapMyShotsSpacing.xl),
-            color = MapMyShotsColors.onImage,
-            fontSize = MapMyShotsTypography.imageLabel,
-            fontWeight = FontWeight.SemiBold
-        )
     }
 }
 
