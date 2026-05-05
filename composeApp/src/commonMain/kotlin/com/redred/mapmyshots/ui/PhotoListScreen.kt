@@ -62,6 +62,7 @@ fun PhotoListScreen(
         reviewPhotos = uiState.reviewPhotos,
         ignoredPhotos = uiState.ignoredPhotos,
         onOpen = onOpen,
+        onSelectTab = { tab -> vm.onIntent(PhotoListIntent.SelectTab(tab)) },
         onLoadMore = { vm.onIntent(PhotoListIntent.LoadNextPage) },
         onLongPress = { asset -> selectedAsset = asset }
     )

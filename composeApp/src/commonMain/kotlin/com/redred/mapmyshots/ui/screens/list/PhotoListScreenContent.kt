@@ -46,6 +46,7 @@ internal fun PhotoListScreenContent(
     reviewPhotos: List<Asset>,
     ignoredPhotos: List<Asset>,
     onOpen: (Asset) -> Unit,
+    onSelectTab: (PhotoListTab) -> Unit,
     onLoadMore: () -> Unit,
     onLongPress: (Asset) -> Unit
 ) {
@@ -108,12 +109,10 @@ internal fun PhotoListScreenContent(
             item(span = { GridItemSpan(maxLineSpan) }) {
                 GalleryHeader(
                     selectedTab = selectedTab,
-                    count = when (selectedTab) {
-                        PhotoListTab.Review ->
-                            if (progress.found > visiblePhotos.size) progress.found else visiblePhotos.size
-                        PhotoListTab.Ignored -> visiblePhotos.size
-                    },
+                    reviewCount = if (progress.found > reviewPhotos.size) progress.found else reviewPhotos.size,
+                    ignoredCount = ignoredPhotos.size,
                     progress = progress,
+                    onSelectTab = onSelectTab,
                 )
             }
 
@@ -168,6 +167,44 @@ private fun PhotoListScreenContentPreview() {
             reviewPhotos = assets,
             ignoredPhotos = emptyList(),
             onOpen = {},
+            onSelectTab = {},
+            onLoadMore = {},
+            onLongPress = {}
+        )
+    }
+}
+
+@OptIn(ExperimentalTime::class)
+@Preview
+@Composable
+private fun PhotoListScreenContentWithIgnoredPreview() {
+    val assets = listOf(
+        Asset(
+            id = "preview_1",
+            displayName = "IMG_001",
+            takenAt = Instant.fromEpochMilliseconds(1761472800000),
+            uri = "content://preview/1"
+        ),
+        Asset(
+            id = "preview_2",
+            displayName = "IMG_002",
+            takenAt = Instant.fromEpochMilliseconds(1761386400000),
+            uri = "content://preview/2"
+        )
+    )
+
+    MaterialTheme {
+        PhotoListScreenContent(
+            gridState = rememberLazyGridState(),
+            isLoading = false,
+            isLoadingMore = false,
+            isLoadingIgnored = false,
+            progress = LoadProgress(scanned = 120, total = 120, found = assets.size, active = false),
+            selectedTab = PhotoListTab.Review,
+            reviewPhotos = assets,
+            ignoredPhotos = assets,
+            onOpen = {},
+            onSelectTab = {},
             onLoadMore = {},
             onLongPress = {}
         )

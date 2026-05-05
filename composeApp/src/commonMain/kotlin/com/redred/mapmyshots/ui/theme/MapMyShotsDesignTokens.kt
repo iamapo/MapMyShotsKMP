@@ -27,6 +27,7 @@ internal object MapMyShotsColors {
 }
 
 internal object MapMyShotsSpacing {
+    val xxxs = 2.dp
     val xxs = 4.dp
     val xs = 6.dp
     val sm = 8.dp
@@ -40,6 +41,7 @@ internal object MapMyShotsSpacing {
 
 internal object MapMyShotsSizes {
     val galleryMinCell = 164.dp
+    val headerStatCardWidth = 105.dp
     val listLoading = 40.dp
     val loadMore = 28.dp
     val photoCardImageHeight = 138.dp
@@ -81,6 +83,7 @@ internal object MapMyShotsTypography {
     val metadata = 16.sp
     val cardDate = 15.sp
     val gallerySubtitle = 17.sp
+    val statValue = 28.sp
     val suggestionIcon = 18.sp
     val suggestionTitle = 17.sp
     val metadataIcon = 21.sp

@@ -7,6 +7,9 @@
     <string name="ignored_photos_count">%1$d ignored photos</string>
     <string name="bottom_nav_review">Review</string>
     <string name="bottom_nav_ignored">Ignored</string>
+    <string name="gallery_stat_scanned">scanned</string>
+    <string name="gallery_stat_open">open</string>
+    <string name="gallery_stat_ignored">ignored</string>
     <string name="missing_location_badge">No location</string>
     <string name="location_set_badge">Location set</string>
     <string name="details_title">Photo details</string>
