@@ -42,4 +42,8 @@
     <string name="apply_location_message">Do you want to apply the location from “%1$s” to the current photo?</string>
     <string name="apply_location_failed">Location could not be applied.</string>
     <string name="apply_location_success">Location successfully applied.</string>
+    <string name="choose_location">Choose on map</string>
+    <string name="choose_location_title">Choose location</string>
+    <string name="choose_location_hint">Tap the map or use a nearby suggestion, then apply the coordinates to this photo.</string>
+    <string name="choose_location_coordinates">Lat %.5f · Lon %.5f</string>
 </resources>

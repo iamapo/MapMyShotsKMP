@@ -23,13 +23,16 @@ data class PhotoDetailsUiState(
     val timeWindow: TimeWindow = TimeWindow.OneHour,
     val loading: Boolean = false,
     val similar: List<Asset> = emptyList(),
-    val locationNames: Map<String, String> = emptyMap()
+    val locationNames: Map<String, String> = emptyMap(),
+    val currentLocation: Pair<Double, Double>? = null,
+    val suggestionLocations: Map<String, Pair<Double, Double>> = emptyMap()
 )
 
 sealed interface PhotoDetailsIntent {
     data object LoadSimilar : PhotoDetailsIntent
     data class SetTimeWindow(val timeWindow: TimeWindow) : PhotoDetailsIntent
     data class ApplyLocationFrom(val source: Asset) : PhotoDetailsIntent
+    data class ApplyManualLocation(val lat: Double, val lon: Double) : PhotoDetailsIntent
     data object Delete : PhotoDetailsIntent
 }
 
@@ -70,6 +73,7 @@ class PhotoDetailsViewModel(
             PhotoDetailsIntent.LoadSimilar -> loadSimilar()
             is PhotoDetailsIntent.SetTimeWindow -> setTimeWindow(intent.timeWindow)
             is PhotoDetailsIntent.ApplyLocationFrom -> applyLocationFrom(intent.source)
+            is PhotoDetailsIntent.ApplyManualLocation -> applyManualLocation(intent.lat, intent.lon)
             PhotoDetailsIntent.Delete -> delete()
         }
     }
@@ -87,13 +91,17 @@ class PhotoDetailsViewModel(
                 val list = sim.findByTimeAndGps(photo, getTimeRangeDuration(currentRange))
 
                 val names = mutableMapOf<String, String>()
+                val locations = mutableMapOf<String, Pair<Double, Double>>()
                 for (a in list) {
+                    exif.getLatLon(a)?.let { locations[a.id] = it }
                     names[a.id] = exif.getLocationName(a, geocoder)
                 }
                 _uiState.update {
                     it.copy(
                         similar = list,
-                        locationNames = names
+                        locationNames = names,
+                        currentLocation = exif.getLatLon(photo),
+                        suggestionLocations = locations
                     )
                 }
             } finally {
@@ -113,6 +121,19 @@ class PhotoDetailsViewModel(
             val ok = exif.writeLatLon(photo, pair.first, pair.second)
             if (ok) {
                 val locationName = exif.getLocationName(src, geocoder)
+                _events.tryEmit(PhotoDetailsEvent.Saved(locationName = locationName))
+            } else {
+                _events.tryEmit(PhotoDetailsEvent.Error(PhotoDetailsError.WriteFailed))
+            }
+        }
+    }
+
+    fun applyManualLocation(lat: Double, lon: Double) {
+        scope.launch {
+            val ok = exif.writeLatLon(photo, lat, lon)
+            if (ok) {
+                val locationName = geocoder.reverseGeocode(lat, lon) ?: "Location Unknown"
+                _uiState.update { it.copy(currentLocation = lat to lon) }
                 _events.tryEmit(PhotoDetailsEvent.Saved(locationName = locationName))
             } else {
                 _events.tryEmit(PhotoDetailsEvent.Error(PhotoDetailsError.WriteFailed))

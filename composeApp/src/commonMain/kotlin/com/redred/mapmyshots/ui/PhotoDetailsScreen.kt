@@ -12,6 +12,8 @@ import com.redred.mapmyshots.model.Asset
 import com.redred.mapmyshots.ui.components.ApplyLocationDialog
 import com.redred.mapmyshots.ui.components.ConfirmDeletePhotoDialog
 import com.redred.mapmyshots.ui.components.ErrorDialog
+import com.redred.mapmyshots.ui.components.LocationMapCandidate
+import com.redred.mapmyshots.ui.components.LocationMapPickerDialog
 import com.redred.mapmyshots.ui.screens.details.PhotoDetailsScreenContent
 import com.redred.mapmyshots.viewmodel.PhotoDetailsEvent
 import com.redred.mapmyshots.viewmodel.PhotoDetailsIntent
@@ -43,6 +45,7 @@ fun PhotoDetailsScreen(
     var pendingApplyFrom by remember { mutableStateOf<Asset?>(null) }
     var applyingFrom by remember { mutableStateOf<Asset?>(null) }
     var pendingDelete by remember { mutableStateOf(false) }
+    var showLocationPicker by remember { mutableStateOf(false) }
     var applyError by remember { mutableStateOf<PhotoDetailsEvent.Error?>(null) }
     var deleteError by remember { mutableStateOf(false) }
     var hasLocation by remember(photo.id) { mutableStateOf(photo.hasLocation == true) }
@@ -96,6 +99,9 @@ fun PhotoDetailsScreen(
         onAssetClicked = { asset ->
             pendingApplyFrom = asset
         },
+        onChooseLocationOnMap = {
+            showLocationPicker = true
+        },
         onDelete = {
             pendingDelete = true
         },
@@ -112,6 +118,31 @@ fun PhotoDetailsScreen(
                 pendingDelete = false
                 deleteError = false
                 vm.onIntent(PhotoDetailsIntent.Delete)
+            }
+        )
+    }
+
+    if (showLocationPicker) {
+        val fallbackLocation = uiState.suggestionLocations.values.firstOrNull() ?: (52.5200 to 13.4050)
+        val candidates = uiState.similar.mapNotNull { asset ->
+            val location = uiState.suggestionLocations[asset.id] ?: return@mapNotNull null
+            LocationMapCandidate(
+                label = names[asset.id].orEmpty().ifBlank { asset.displayName ?: asset.id },
+                lat = location.first,
+                lon = location.second
+            )
+        }
+
+        LocationMapPickerDialog(
+            initialLocation = uiState.currentLocation ?: fallbackLocation,
+            candidates = candidates,
+            onDismiss = { showLocationPicker = false },
+            onApply = { lat, lon ->
+                showLocationPicker = false
+                applyError = null
+                showApplySuccess = false
+                applyingFrom = null
+                vm.onIntent(PhotoDetailsIntent.ApplyManualLocation(lat, lon))
             }
         )
     }

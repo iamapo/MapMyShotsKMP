@@ -14,6 +14,11 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Map
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -39,6 +44,7 @@ import com.redred.mapmyshots.ui.components.TimeWindowSelector
 import com.redred.mapmyshots.ui.theme.*
 import mapmyshots.composeapp.generated.resources.Res
 import mapmyshots.composeapp.generated.resources.apply_location_success
+import mapmyshots.composeapp.generated.resources.choose_location
 import mapmyshots.composeapp.generated.resources.location_set_badge
 import mapmyshots.composeapp.generated.resources.missing_location_badge
 import mapmyshots.composeapp.generated.resources.similar_photos_title
@@ -62,6 +68,7 @@ internal fun PhotoDetailsScreenContent(
     appliedSuggestionId: String?,
     onTimeWindowSelected: (TimeWindow) -> Unit,
     onAssetClicked: (Asset) -> Unit,
+    onChooseLocationOnMap: () -> Unit,
     onDelete: () -> Unit,
     onToggleIgnored: () -> Unit,
     onBack: () -> Unit
@@ -164,6 +171,23 @@ internal fun PhotoDetailsScreenContent(
             }
 
             item {
+                Button(
+                    onClick = onChooseLocationOnMap,
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = ButtonDefaults.buttonColors(containerColor = MapMyShotsColors.primary)
+                ) {
+                    Icon(
+                        imageVector = Icons.Filled.Map,
+                        contentDescription = null
+                    )
+                    Text(
+                        text = stringResource(Res.string.choose_location),
+                        modifier = Modifier.padding(start = MapMyShotsSpacing.sm)
+                    )
+                }
+            }
+
+            item {
                 Text(
                     text = stringResource(Res.string.similar_photos_title),
                     fontSize = MapMyShotsTypography.sectionTitle,
@@ -250,6 +274,7 @@ private fun PhotoDetailsScreenContentPreview() {
             appliedSuggestionId = "",
             onTimeWindowSelected = {},
             onAssetClicked = {},
+            onChooseLocationOnMap = {},
             onDelete = {},
             onToggleIgnored = {},
             onBack = {}
@@ -299,6 +324,7 @@ private fun PhotoDetailsScreenContentNewLocationPreview() {
             appliedSuggestionId = "preview_sim_1",
             onTimeWindowSelected = {},
             onAssetClicked = {},
+            onChooseLocationOnMap = {},
             onDelete = {},
             onToggleIgnored = {},
             onBack = {}
