@@ -7,7 +7,7 @@ import androidx.compose.ui.unit.sp
 
 internal object MapMyShotsColors {
     val primary = Color(0xFF0B63E5)
-    val background = Color(0xFFF8FAFD)
+    val background = Color.White
     val surface = Color.White
     val surfaceSelected = primary.copy(alpha = 0.06f)
     val transparent = Color.Transparent

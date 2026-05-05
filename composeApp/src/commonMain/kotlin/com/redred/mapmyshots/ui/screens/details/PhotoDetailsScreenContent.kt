@@ -1,6 +1,8 @@
 package com.redred.mapmyshots.ui.screens.details
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.PaddingValues
@@ -9,6 +11,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.MaterialTheme
@@ -17,8 +20,11 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.dp
 import com.redred.mapmyshots.model.Asset
 import com.redred.mapmyshots.model.TimeWindow
 import com.redred.mapmyshots.ui.components.AssetThumbnailWithDateTime
@@ -38,6 +44,7 @@ import mapmyshots.composeapp.generated.resources.missing_location_badge
 import mapmyshots.composeapp.generated.resources.similar_photos_title
 import mapmyshots.composeapp.generated.resources.unknown_location
 import org.jetbrains.compose.resources.stringResource
+import kotlin.math.abs
 import kotlin.time.ExperimentalTime
 import kotlin.time.Instant
 
@@ -59,97 +66,144 @@ internal fun PhotoDetailsScreenContent(
     onToggleIgnored: () -> Unit,
     onBack: () -> Unit
 ) {
-    LazyColumn(
+    Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(MapMyShotsColors.background),
-        contentPadding = PaddingValues(MapMyShotsSpacing.screen),
-        verticalArrangement = Arrangement.spacedBy(MapMyShotsSpacing.screen - MapMyShotsSpacing.xxs)
+            .background(MapMyShotsColors.background)
+            .pointerInput(onBack) {
+                val edgeWidth = 28.dp.toPx()
+                val triggerDistance = 72.dp.toPx()
+
+                awaitEachGesture {
+                    val down = awaitFirstDown(requireUnconsumed = false)
+                    if (down.position.x > edgeWidth) return@awaitEachGesture
+
+                    var totalDx = 0f
+                    var totalDy = 0f
+
+                    while (true) {
+                        val event = awaitPointerEvent()
+                        val change = event.changes.firstOrNull { it.id == down.id } ?: break
+
+                        if (!change.pressed) break
+
+                        val delta = change.position - change.previousPosition
+                        totalDx += delta.x
+                        totalDy += delta.y
+
+                        if (abs(totalDy) > abs(totalDx) && abs(totalDy) > triggerDistance / 2f) {
+                            break
+                        }
+
+                        if (totalDx > triggerDistance && abs(totalDx) > abs(totalDy)) {
+                            change.consume()
+                            onBack()
+                            break
+                        }
+
+                        if (totalDx > 0f && abs(totalDx) > abs(totalDy)) {
+                            change.consume()
+                        }
+                    }
+                }
+            }
     ) {
-        item {
-            DetailTopBar(
-                onBack = onBack,
-                onDelete = onDelete,
-                isIgnored = isIgnored,
-                onToggleIgnored = onToggleIgnored
-            )
-        }
-
-        item {
-            Box {
-                AssetThumbnailWithDateTime(
-                    asset = photo,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(MapMyShotsSizes.detailHeroHeight)
-                        .clip(MapMyShotsShapes.hero)
-                )
-
-                StatusBadge(
-                    text = stringResource(
-                        if (hasLocation) Res.string.location_set_badge else Res.string.missing_location_badge
-                    ),
-                    success = hasLocation,
-                    modifier = Modifier
-                        .align(Alignment.TopStart)
-                        .padding(MapMyShotsSpacing.xl)
+        LazyColumn(
+            modifier = Modifier
+                .statusBarsPadding()
+                .fillMaxSize(),
+            contentPadding = PaddingValues(MapMyShotsSpacing.screen),
+            verticalArrangement = Arrangement.spacedBy(MapMyShotsSpacing.screen - MapMyShotsSpacing.xxs)
+        ) {
+            item {
+                DetailTopBar(
+                    onBack = onBack,
+                    onDelete = onDelete,
+                    isIgnored = isIgnored,
+                    onToggleIgnored = onToggleIgnored
                 )
             }
-        }
 
-        if (showApplySuccess) {
             item {
-                SuccessBanner(text = stringResource(Res.string.apply_location_success))
+                Box {
+                    AssetThumbnailWithDateTime(
+                        asset = photo,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(MapMyShotsSizes.detailHeroHeight)
+                            .clip(MapMyShotsShapes.hero)
+                            .shadow(
+                                elevation = 4.dp,
+                                shape = MapMyShotsShapes.card
+                            )
+                    )
+
+                    StatusBadge(
+                        text = stringResource(
+                            if (hasLocation) Res.string.location_set_badge else Res.string.missing_location_badge
+                        ),
+                        success = hasLocation,
+                        modifier = Modifier
+                            .align(Alignment.TopStart)
+                            .padding(MapMyShotsSpacing.xl)
+                    )
+                }
             }
-        }
 
-        item {
-            MetadataCard(
-                photo = photo,
-                locationName = currentLocationName
-            )
-        }
+            if (showApplySuccess) {
+                item {
+                    SuccessBanner(text = stringResource(Res.string.apply_location_success))
+                }
+            }
 
-        item {
-            Text(
-                text = stringResource(Res.string.similar_photos_title),
-                fontSize = MapMyShotsTypography.sectionTitle,
-                fontWeight = FontWeight.Bold,
-                color = MapMyShotsColors.textPrimary
-            )
-        }
-
-        item {
-            TimeWindowSelector(
-                selected = timeWindow,
-                onSelected = onTimeWindowSelected
-            )
-        }
-
-        if (loading) {
             item {
-                DetailsLoadingState()
-            }
-        } else if (similar.isNotEmpty()) {
-            items(similar, key = { it.id }) { asset ->
-                SuggestionCard(
+                MetadataCard(
                     photo = photo,
-                    suggestion = asset,
-                    place = names[asset.id].orEmpty().ifBlank {
-                        asset.displayName ?: stringResource(Res.string.unknown_location)
-                    },
-                    isApplied = appliedSuggestionId == asset.id,
-                    onClick = { onAssetClicked(asset) }
+                    locationName = currentLocationName
                 )
             }
-        } else {
-            item {
-                SimilarPhotosEmptyState()
-            }
-        }
 
-        item {
-            Spacer(Modifier.height(MapMyShotsSpacing.bottomSpacer))
+            item {
+                Text(
+                    text = stringResource(Res.string.similar_photos_title),
+                    fontSize = MapMyShotsTypography.sectionTitle,
+                    fontWeight = FontWeight.Bold,
+                    color = MapMyShotsColors.textPrimary
+                )
+            }
+
+            item {
+                TimeWindowSelector(
+                    selected = timeWindow,
+                    onSelected = onTimeWindowSelected
+                )
+            }
+
+            if (loading) {
+                item {
+                    DetailsLoadingState()
+                }
+            } else if (similar.isNotEmpty()) {
+                items(similar, key = { it.id }) { asset ->
+                    SuggestionCard(
+                        photo = photo,
+                        suggestion = asset,
+                        place = names[asset.id].orEmpty().ifBlank {
+                            asset.displayName ?: stringResource(Res.string.unknown_location)
+                        },
+                        isApplied = appliedSuggestionId == asset.id,
+                        onClick = { onAssetClicked(asset) }
+                    )
+                }
+            } else {
+                item {
+                    SimilarPhotosEmptyState()
+                }
+            }
+
+            item {
+                Spacer(Modifier.height(MapMyShotsSpacing.bottomSpacer))
+            }
         }
     }
 }

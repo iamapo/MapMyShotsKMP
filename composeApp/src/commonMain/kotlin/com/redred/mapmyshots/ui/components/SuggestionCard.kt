@@ -1,6 +1,5 @@
 package com.redred.mapmyshots.ui.components
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Row
@@ -16,7 +15,9 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.dp
 import com.redred.mapmyshots.model.Asset
 import com.redred.mapmyshots.ui.theme.*
 
@@ -28,12 +29,6 @@ internal fun SuggestionCard(
     isApplied: Boolean = false,
     onClick: () -> Unit
 ) {
-    val backgroundColor = if (isApplied) {
-        MapMyShotsColors.surfaceSelected
-    } else {
-        MapMyShotsColors.surface
-    }
-
     ElevatedCard(
         modifier = Modifier
             .fillMaxWidth()
@@ -48,8 +43,13 @@ internal fun SuggestionCard(
                     Modifier
                 }
             )
-            .clickable(enabled = !isApplied, onClick = onClick),
-        shape = MapMyShotsShapes.card
+            .clickable(enabled = !isApplied, onClick = onClick)
+            .shadow(
+                elevation = 4.dp,
+                shape = MapMyShotsShapes.card
+            ),
+        shape = MapMyShotsShapes.card,
+        colors = CardDefaults.elevatedCardColors(containerColor = MapMyShotsColors.surface),
     ) {
         Row(
             modifier = Modifier

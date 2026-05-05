@@ -16,8 +16,10 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.dp
 import com.redred.mapmyshots.model.TimeWindow
 import com.redred.mapmyshots.ui.theme.*
 import mapmyshots.composeapp.generated.resources.Res
@@ -35,7 +37,10 @@ internal fun TimeWindowSelector(
         modifier = Modifier
             .fillMaxWidth()
             .height(MapMyShotsSizes.timeSelectorHeight)
-            .clip(MapMyShotsShapes.pill)
+            .shadow(
+                elevation = 4.dp,
+                shape = MapMyShotsShapes.card
+            )            .clip(MapMyShotsShapes.pill)
             .background(MapMyShotsColors.surface)
             .border(
                 width = MapMyShotsStroke.thin,

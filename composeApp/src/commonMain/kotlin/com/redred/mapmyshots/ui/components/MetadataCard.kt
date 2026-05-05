@@ -13,7 +13,9 @@ import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.dp
 import com.redred.mapmyshots.model.Asset
 import com.redred.mapmyshots.ui.theme.*
 import mapmyshots.composeapp.generated.resources.Res
@@ -68,9 +70,13 @@ internal fun MetadataCard(
     }
 
     ElevatedCard(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier.fillMaxWidth()
+            .shadow(
+                elevation = 4.dp,
+                shape = MapMyShotsShapes.card
+            ),
         shape = MapMyShotsShapes.metadataCard,
-        colors = CardDefaults.elevatedCardColors(containerColor = MapMyShotsColors.surface)
+        colors = CardDefaults.elevatedCardColors(containerColor = MapMyShotsColors.surface),
     ) {
         Column(
             modifier = Modifier.padding(horizontal = MapMyShotsSpacing.screen - MapMyShotsSpacing.xxs, vertical = MapMyShotsSpacing.sm)
