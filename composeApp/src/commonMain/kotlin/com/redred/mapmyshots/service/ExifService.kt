@@ -21,7 +21,12 @@ class ExifService(private val exifPlatform: ExifPlatform) {
     }
 
     suspend fun writeLatLon(asset: Asset, lat: Double, lon: Double): Boolean =
-        exifPlatform.writeLatLon(asset, lat, lon)
+        exifPlatform.writeLatLon(asset, lat, lon).also { success ->
+            if (success) {
+                cache[asset.id] = lat to lon
+                nameCache.remove(asset.id)
+            }
+        }
 
     suspend fun getLocationName(asset: Asset, geocoder: GeocoderPlatform): String {
         nameCache[asset.id]?.let { return it }

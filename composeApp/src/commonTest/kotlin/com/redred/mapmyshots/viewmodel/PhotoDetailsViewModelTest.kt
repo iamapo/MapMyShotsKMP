@@ -7,6 +7,7 @@ import com.redred.mapmyshots.platform.ExifPlatform
 import com.redred.mapmyshots.platform.GeocoderPlatform
 import com.redred.mapmyshots.platform.PhotoRepository
 import com.redred.mapmyshots.service.ExifService
+import com.redred.mapmyshots.service.PhotoService
 import com.redred.mapmyshots.service.SimilarityService
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.async
@@ -97,6 +98,7 @@ class PhotoDetailsViewModelTest {
         return PhotoDetailsViewModel(
             photo = target,
             exif = exif,
+            photoService = PhotoService(repo, exif),
             sim = SimilarityService(repo, exif),
             geocoder = FakeGeocoderPlatform()
         )
@@ -142,6 +144,8 @@ private class RecordingPhotoRepository(
     override suspend fun listImagesPage(offset: Int, limit: Int): AssetPage {
         return AssetPage(emptyList(), endReached = true)
     }
+
+    override suspend fun listImagesByIds(ids: List<String>): List<Asset> = emptyList()
 
     override suspend fun listAllImages(limitPerAlbum: Int): List<Asset> = emptyList()
 

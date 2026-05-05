@@ -21,6 +21,21 @@ import kotlin.time.Instant
 class IOSPhotoRepository : PhotoRepository {
 
     @OptIn(ExperimentalForeignApi::class, ExperimentalTime::class)
+    override suspend fun listImagesByIds(ids: List<String>): List<Asset> {
+        if (ids.isEmpty()) return emptyList()
+
+        val fetchResult = PHAsset.fetchAssetsWithLocalIdentifiers(ids, null)
+        val assetsById = mutableMapOf<String, Asset>()
+
+        fetchResult.enumerateObjectsUsingBlock { obj, _, _ ->
+            val asset = obj as? PHAsset ?: return@enumerateObjectsUsingBlock
+            assetsById[asset.localIdentifier] = asset.toAsset(displayName = "")
+        }
+
+        return ids.mapNotNull(assetsById::get)
+    }
+
+    @OptIn(ExperimentalForeignApi::class, ExperimentalTime::class)
     override suspend fun listAllImages(limitPerAlbum: Int): List<Asset> {
         val options = PHFetchOptions().apply {
             sortDescriptors = listOf(NSSortDescriptor(key = "creationDate", ascending = false))

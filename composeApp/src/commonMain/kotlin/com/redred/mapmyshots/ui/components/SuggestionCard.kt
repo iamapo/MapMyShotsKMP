@@ -1,11 +1,14 @@
 package com.redred.mapmyshots.ui.components
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ElevatedCard
@@ -25,6 +28,12 @@ internal fun SuggestionCard(
     isApplied: Boolean = false,
     onClick: () -> Unit
 ) {
+    val backgroundColor = if (isApplied) {
+        MapMyShotsColors.surfaceSelected
+    } else {
+        MapMyShotsColors.surface
+    }
+
     ElevatedCard(
         modifier = Modifier
             .fillMaxWidth()
@@ -40,14 +49,7 @@ internal fun SuggestionCard(
                 }
             )
             .clickable(enabled = !isApplied, onClick = onClick),
-        shape = MapMyShotsShapes.card,
-        colors = CardDefaults.elevatedCardColors(
-            containerColor = if (isApplied) {
-                MapMyShotsColors.surfaceSelected
-            } else {
-                MapMyShotsColors.surface
-            }
-        )
+        shape = MapMyShotsShapes.card
     ) {
         Row(
             modifier = Modifier
@@ -55,15 +57,20 @@ internal fun SuggestionCard(
                 .height(MapMyShotsSizes.suggestionHeight),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            SuggestionThumbnail(suggestion = suggestion)
+            SuggestionThumbnail(
+                suggestion = suggestion,
+                modifier = Modifier.fillMaxHeight()
+            )
 
-            Spacer(Modifier.width(MapMyShotsSpacing.xl))
+            Spacer(Modifier.width(MapMyShotsSpacing.lg))
 
             SuggestionInfo(
                 photo = photo,
                 suggestion = suggestion,
                 place = place,
-                modifier = Modifier.weight(1f)
+                modifier = Modifier
+                    .weight(1f)
+                    .padding(vertical = MapMyShotsSpacing.lg)
             )
 
             if (isApplied) {

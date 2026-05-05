@@ -13,6 +13,8 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Visibility
+import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -31,7 +33,9 @@ import org.jetbrains.compose.resources.stringResource
 @Composable
 internal fun DetailTopBar(
     onBack: () -> Unit,
-    onDelete: (() -> Unit)? = null
+    onDelete: (() -> Unit)? = null,
+    isIgnored: Boolean = false,
+    onToggleIgnored: (() -> Unit)? = null
 ) {
     Row(
         modifier = Modifier
@@ -66,6 +70,23 @@ internal fun DetailTopBar(
 
         Spacer(Modifier.weight(1f))
 
+        if (onToggleIgnored != null) {
+            Box(
+                modifier = Modifier
+                    .size(MapMyShotsSizes.detailBackButton)
+                    .clip(CircleShape)
+                    .clickable(onClick = onToggleIgnored),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = if (isIgnored) Icons.Filled.Visibility else Icons.Filled.VisibilityOff,
+                    contentDescription = null,
+                    tint = MapMyShotsColors.primary,
+                )
+            }
+            Spacer(Modifier.width(MapMyShotsSpacing.xs))
+        }
+
         if (onDelete != null) {
             Box(
                 modifier = Modifier
@@ -88,6 +109,6 @@ internal fun DetailTopBar(
 @Composable
 private fun DetailTopBarPreview() {
     MaterialTheme {
-        DetailTopBar(onBack = {}, onDelete = {})
+        DetailTopBar(onBack = {}, onDelete = {}, onToggleIgnored = {})
     }
 }

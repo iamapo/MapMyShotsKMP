@@ -44,6 +44,7 @@ import kotlin.time.Instant
 @Composable
 internal fun PhotoDetailsScreenContent(
     photo: Asset,
+    isIgnored: Boolean,
     timeWindow: TimeWindow,
     loading: Boolean,
     similar: List<Asset>,
@@ -55,6 +56,7 @@ internal fun PhotoDetailsScreenContent(
     onTimeWindowSelected: (TimeWindow) -> Unit,
     onAssetClicked: (Asset) -> Unit,
     onDelete: () -> Unit,
+    onToggleIgnored: () -> Unit,
     onBack: () -> Unit
 ) {
     LazyColumn(
@@ -67,7 +69,9 @@ internal fun PhotoDetailsScreenContent(
         item {
             DetailTopBar(
                 onBack = onBack,
-                onDelete = onDelete
+                onDelete = onDelete,
+                isIgnored = isIgnored,
+                onToggleIgnored = onToggleIgnored
             )
         }
 
@@ -178,6 +182,7 @@ private fun PhotoDetailsScreenContentPreview() {
     MaterialTheme {
         PhotoDetailsScreenContent(
             photo = current,
+            isIgnored = false,
             timeWindow = TimeWindow.OneHour,
             loading = false,
             similar = similar,
@@ -192,6 +197,7 @@ private fun PhotoDetailsScreenContentPreview() {
             onTimeWindowSelected = {},
             onAssetClicked = {},
             onDelete = {},
+            onToggleIgnored = {},
             onBack = {}
         )
     }
@@ -225,6 +231,7 @@ private fun PhotoDetailsScreenContentNewLocationPreview() {
     MaterialTheme {
         PhotoDetailsScreenContent(
             photo = current,
+            isIgnored = false,
             timeWindow = TimeWindow.OneHour,
             loading = false,
             similar = similar,
@@ -239,6 +246,7 @@ private fun PhotoDetailsScreenContentNewLocationPreview() {
             onTimeWindowSelected = {},
             onAssetClicked = {},
             onDelete = {},
+            onToggleIgnored = {},
             onBack = {}
         )
     }

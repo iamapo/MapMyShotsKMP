@@ -1,6 +1,6 @@
 package com.redred.mapmyshots.ui.components
 
-import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.width
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
@@ -13,12 +13,15 @@ import com.redred.mapmyshots.ui.theme.MapMyShotsShapes
 import com.redred.mapmyshots.ui.theme.MapMyShotsSizes
 
 @Composable
-internal fun SuggestionThumbnail(suggestion: Asset) {
+internal fun SuggestionThumbnail(
+    suggestion: Asset,
+    modifier: Modifier = Modifier
+) {
     AssetThumbnail(
         asset = suggestion,
-        modifier = Modifier
+        modifier = modifier
             .width(MapMyShotsSizes.suggestionImageWidth)
-            .fillMaxSize()
+            .fillMaxHeight()
             .clip(MapMyShotsShapes.suggestionImage)
     )
 }

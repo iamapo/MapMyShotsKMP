@@ -13,9 +13,11 @@ import androidx.compose.runtime.setValue
 import com.redred.mapmyshots.model.Asset
 import com.redred.mapmyshots.ui.components.ConfirmDeletePhotoDialog
 import com.redred.mapmyshots.ui.components.ErrorDialog
+import com.redred.mapmyshots.ui.components.PhotoListAssetActionsDialog
 import com.redred.mapmyshots.ui.screens.list.PhotoListScreenContent
 import com.redred.mapmyshots.viewmodel.PhotoListEvent
 import com.redred.mapmyshots.viewmodel.PhotoListIntent
+import com.redred.mapmyshots.viewmodel.PhotoListTab
 import com.redred.mapmyshots.viewmodel.PhotoListViewModel
 import mapmyshots.composeapp.generated.resources.Res
 import mapmyshots.composeapp.generated.resources.delete_failed
@@ -37,6 +39,7 @@ fun PhotoListScreen(
     LaunchedEffect(Unit) { vm.onIntent(PhotoListIntent.LoadFirstPage) }
 
     val uiState by vm.uiState.collectAsState()
+    var selectedAsset by remember { mutableStateOf<Asset?>(null) }
     var pendingDelete by remember { mutableStateOf<Asset?>(null) }
     var deleteError by remember { mutableStateOf(false) }
 
@@ -53,12 +56,38 @@ fun PhotoListScreen(
         gridState = gridState,
         isLoading = uiState.isLoading,
         isLoadingMore = uiState.isLoadingMore,
+        isLoadingIgnored = uiState.isLoadingIgnored,
         progress = uiState.progress,
-        photos = uiState.photos,
+        selectedTab = uiState.selectedTab,
+        reviewPhotos = uiState.reviewPhotos,
+        ignoredPhotos = uiState.ignoredPhotos,
         onOpen = onOpen,
         onLoadMore = { vm.onIntent(PhotoListIntent.LoadNextPage) },
-        onLongPress = { asset -> pendingDelete = asset }
+        onLongPress = { asset -> selectedAsset = asset }
     )
+
+    if (selectedAsset != null) {
+        val asset = selectedAsset!!
+        val isIgnored = uiState.selectedTab == PhotoListTab.Ignored
+        PhotoListAssetActionsDialog(
+            isIgnored = isIgnored,
+            onDismiss = { selectedAsset = null },
+            onToggleIgnored = {
+                selectedAsset = null
+                vm.onIntent(
+                    if (isIgnored) {
+                        PhotoListIntent.Restore(asset.id)
+                    } else {
+                        PhotoListIntent.Ignore(asset)
+                    }
+                )
+            },
+            onDelete = {
+                selectedAsset = null
+                pendingDelete = asset
+            }
+        )
+    }
 
     if (pendingDelete != null) {
         val asset = pendingDelete!!

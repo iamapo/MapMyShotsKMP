@@ -19,7 +19,10 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import com.redred.mapmyshots.ui.theme.*
 import com.redred.mapmyshots.viewmodel.LoadProgress
+import com.redred.mapmyshots.viewmodel.PhotoListTab
 import mapmyshots.composeapp.generated.resources.Res
+import mapmyshots.composeapp.generated.resources.ignored_photos_count
+import mapmyshots.composeapp.generated.resources.ignored_photos_title
 import mapmyshots.composeapp.generated.resources.photos_without_location_count
 import mapmyshots.composeapp.generated.resources.photos_without_location_count_loading
 import mapmyshots.composeapp.generated.resources.photos_without_location_title
@@ -27,6 +30,7 @@ import org.jetbrains.compose.resources.stringResource
 
 @Composable
 internal fun GalleryHeader(
+    selectedTab: PhotoListTab,
     count: Int,
     progress: LoadProgress
 ) {
@@ -38,7 +42,13 @@ internal fun GalleryHeader(
     ) {
         Column(modifier = Modifier.weight(1f)) {
             Text(
-                text = stringResource(Res.string.photos_without_location_title),
+                text = stringResource(
+                    if (selectedTab == PhotoListTab.Review) {
+                        Res.string.photos_without_location_title
+                    } else {
+                        Res.string.ignored_photos_title
+                    }
+                ),
                 fontSize = MapMyShotsTypography.heroTitle,
                 fontWeight = FontWeight.Bold,
                 color = MapMyShotsColors.textPrimary
@@ -47,10 +57,12 @@ internal fun GalleryHeader(
             Spacer(Modifier.height(MapMyShotsSpacing.xxs))
 
             Text(
-                text = if (progress.active) {
+                text = if (selectedTab == PhotoListTab.Review && progress.active) {
                     stringResource(Res.string.photos_without_location_count_loading, count)
-                } else {
+                } else if (selectedTab == PhotoListTab.Review) {
                     stringResource(Res.string.photos_without_location_count, count)
+                } else {
+                    stringResource(Res.string.ignored_photos_count, count)
                 },
                 fontSize = MapMyShotsTypography.gallerySubtitle,
                 color = MapMyShotsColors.textMuted
@@ -64,6 +76,7 @@ internal fun GalleryHeader(
 private fun GalleryHeaderPreview() {
     MaterialTheme {
         GalleryHeader(
+            selectedTab = PhotoListTab.Review,
             count = 14,
             progress = LoadProgress(found = 14, active = false)
         )

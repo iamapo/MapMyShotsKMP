@@ -3,9 +3,17 @@ import SwiftUI
 import ComposeApp
 import Photos
 
+private let appBackgroundColor = Color(
+    red: 248.0 / 255.0,
+    green: 250.0 / 255.0,
+    blue: 253.0 / 255.0
+)
+
 struct ComposeHost: UIViewControllerRepresentable {
     func makeUIViewController(context: Context) -> UIViewController {
-        MainViewControllerKt.MainViewController()
+        let viewController = MainViewControllerKt.MainViewController()
+        viewController.view.backgroundColor = UIColor.clear
+        return viewController
     }
     func updateUIViewController(_ uiViewController: UIViewController, context: Context) {}
 }
@@ -18,6 +26,7 @@ struct ContentView: View {
             switch authStatus {
             case .authorized, .limited:
                 ComposeHost()
+                    .ignoresSafeArea()
             case .notDetermined:
                 ProgressView("Zugriff auf Fotos wird angefragt…")
                     .progressViewStyle(.circular)
@@ -43,6 +52,8 @@ struct ContentView: View {
         .onAppear {
             refreshAuthorization()
         }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .background(appBackgroundColor.ignoresSafeArea())
     }
 
     private func refreshAuthorization() {

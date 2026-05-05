@@ -26,8 +26,10 @@ import org.jetbrains.compose.resources.stringResource
 @Composable
 fun PhotoDetailsScreen(
     photo: Asset,
+    isIgnored: Boolean,
     onLocationApplied: () -> Unit,
     onDeleted: () -> Unit,
+    onToggleIgnored: (Asset, Boolean) -> Unit,
     onBack: () -> Unit
 ) {
     val vm: PhotoDetailsViewModel = koinInject(parameters = { parametersOf(photo) })
@@ -55,14 +57,12 @@ fun PhotoDetailsScreen(
     LaunchedEffect(vm) {
         vm.events.collect { event ->
             when (event) {
-                PhotoDetailsEvent.Saved -> {
+                is PhotoDetailsEvent.Saved -> {
                     val source = applyingFrom
                     hasLocation = true
                     showApplySuccess = true
                     appliedSuggestionId = source?.id
-                    currentLocationName = source?.let { asset ->
-                        names[asset.id].orEmpty().ifBlank { asset.displayName ?: asset.id }
-                    }
+                    currentLocationName = event.locationName
                     applyingFrom = null
                     onLocationApplied()
                 }
@@ -81,6 +81,7 @@ fun PhotoDetailsScreen(
 
     PhotoDetailsScreenContent(
         photo = photo,
+        isIgnored = isIgnored,
         timeWindow = uiState.timeWindow,
         loading = uiState.loading,
         similar = uiState.similar,
@@ -97,6 +98,9 @@ fun PhotoDetailsScreen(
         },
         onDelete = {
             pendingDelete = true
+        },
+        onToggleIgnored = {
+            onToggleIgnored(photo, isIgnored)
         },
         onBack = onBack
     )

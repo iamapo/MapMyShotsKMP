@@ -51,10 +51,10 @@ internal object MapMyShotsSizes {
     val iconButton = 44.dp
     val metadataRowHeight = 52.dp
     val metadataIconWidth = 34.dp
-    val suggestionHeight = 96.dp
-    val suggestionImageWidth = 118.dp
-    val suggestionActionWidth = 82.dp
-    val successIcon = 26.dp
+    val suggestionHeight = 108.dp
+    val suggestionImageWidth = 104.dp
+    val suggestionActionWidth = 68.dp
+    val successIcon = 22.dp
     val timeSelectorHeight = 46.dp
     val thumbnailPreviewHeight = 180.dp
 }

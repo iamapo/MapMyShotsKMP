@@ -3,6 +3,10 @@
     <string name="photos_without_location_title">Photos without location</string>
     <string name="photos_without_location_count">%1$d photos without location</string>
     <string name="photos_without_location_count_loading">%1$d photos without location · scanning</string>
+    <string name="ignored_photos_title">Ignored photos</string>
+    <string name="ignored_photos_count">%1$d ignored photos</string>
+    <string name="bottom_nav_review">Review</string>
+    <string name="bottom_nav_ignored">Ignored</string>
     <string name="missing_location_badge">No location</string>
     <string name="location_set_badge">Location set</string>
     <string name="details_title">Photo details</string>
@@ -28,6 +32,12 @@
     <string name="error_title">Error</string>
     <string name="ok">OK</string>
     <string name="delete_failed">Delete failed. Permission may be missing.</string>
+    <string name="ignore_photo_title">Photo actions</string>
+    <string name="ignore_photo_message">Ignored photos disappear from the review list until you restore them.</string>
+    <string name="ignore_photo_action">Ignore</string>
+    <string name="restore_photo_action">Restore</string>
+    <string name="empty_review_photos">No photos without location were found.</string>
+    <string name="empty_ignored_photos">You have not ignored any photos.</string>
     <string name="apply_location_title">Apply location?</string>
     <string name="apply_location_message">Do you want to apply the location from “%1$s” to the current photo?</string>
     <string name="apply_location_failed">Location could not be applied.</string>

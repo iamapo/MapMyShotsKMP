@@ -11,6 +11,7 @@ data class AssetPage(
 
 interface PhotoRepository {
     suspend fun listImagesPage(offset: Int, limit: Int): AssetPage
+    suspend fun listImagesByIds(ids: List<String>): List<Asset>
     suspend fun listAllImages(limitPerAlbum: Int = 0): List<Asset>
     @OptIn(ExperimentalTime::class)
     suspend fun listImagesBetween(min: Instant, max: Instant): List<Asset>

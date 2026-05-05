@@ -3,7 +3,7 @@ package com.redred.mapmyshots.ui.components
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.LocationOn
@@ -32,8 +32,11 @@ internal fun SuggestionInfo(
     place: String,
     modifier: Modifier = Modifier
 ) {
-    Column(modifier = modifier) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
+    Column(modifier = modifier.fillMaxWidth()) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
             Icon(
                 imageVector = Icons.Filled.LocationOn,
                 contentDescription = null,
@@ -42,7 +45,7 @@ internal fun SuggestionInfo(
 
             Spacer(Modifier.width(MapMyShotsSpacing.sm))
 
-            Column {
+            Column(modifier = Modifier.fillMaxWidth()) {
                 Text(
                     text = place,
                     fontSize = MapMyShotsTypography.suggestionTitle,
@@ -58,7 +61,6 @@ internal fun SuggestionInfo(
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
-
             }
         }
     }

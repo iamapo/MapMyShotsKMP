@@ -22,6 +22,53 @@ class AndroidPhotoRepository(private val context: Context): PhotoRepository {
         TODO("Not yet implemented")
     }
 
+    override suspend fun listImagesByIds(ids: List<String>): List<Asset> {
+        if (ids.isEmpty()) return emptyList()
+
+        val baseUri: Uri = if (Build.VERSION.SDK_INT >= 29)
+            MediaStore.Images.Media.getContentUri(MediaStore.VOLUME_EXTERNAL)
+        else
+            MediaStore.Images.Media.EXTERNAL_CONTENT_URI
+
+        val projection = arrayOf(
+            MediaStore.Images.Media._ID,
+            MediaStore.Images.Media.DISPLAY_NAME,
+            MediaStore.Images.Media.DATE_TAKEN,
+            MediaStore.Images.Media.DATE_ADDED,
+            MediaStore.MediaColumns.SIZE
+        )
+        val idOrder = ids.withIndex().associate { it.value to it.index }
+        val placeholders = List(ids.size) { "?" }.joinToString(",")
+        val selection = "${MediaStore.Images.Media._ID} IN ($placeholders) AND ${MediaStore.MediaColumns.SIZE} > 0"
+        val sort = "${MediaStore.Images.Media.DATE_TAKEN} DESC, ${MediaStore.Images.Media.DATE_ADDED} DESC"
+
+        context.contentResolver.query(baseUri, projection, selection, ids.toTypedArray(), sort)?.use { c ->
+            val idCol = c.getColumnIndexOrThrow(MediaStore.Images.Media._ID)
+            val nameCol = c.getColumnIndexOrThrow(MediaStore.Images.Media.DISPLAY_NAME)
+            val takenCol = c.getColumnIndexOrThrow(MediaStore.Images.Media.DATE_TAKEN)
+            val addedCol = c.getColumnIndexOrThrow(MediaStore.Images.Media.DATE_ADDED)
+
+            val out = mutableListOf<Asset>()
+            while (c.moveToNext()) {
+                val id = c.getLong(idCol)
+                val name = c.getString(nameCol)
+                val takenMs = c.getLong(takenCol)
+                val addedSec = c.getLong(addedCol)
+                val ts = if (takenMs > 0) takenMs else max(addedSec, 0L) * 1000L
+                val uri = ContentUris.withAppendedId(baseUri, id)
+                out += Asset(
+                    id = id.toString(),
+                    displayName = name,
+                    takenAt = Instant.fromEpochMilliseconds(if (ts > 0) ts else System.currentTimeMillis()),
+                    uri = uri.toString()
+                )
+            }
+            return out.sortedBy { idOrder[it.id] ?: Int.MAX_VALUE }
+        }
+
+        return emptyList()
+    }
+
     @OptIn(ExperimentalTime::class)
     override suspend fun listAllImages(limitPerAlbum: Int): List<Asset> {
         val baseUri: Uri = if (Build.VERSION.SDK_INT >= 29)

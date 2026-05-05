@@ -50,7 +50,7 @@ internal fun MetadataCard(
                     MetadataEntry(
                         icon = Icons.Filled.LocationOn,
                         label = stringResource(Res.string.metadata_location),
-                        value = resolvedLocation
+                        value = locationName
                     )
                 )
             }

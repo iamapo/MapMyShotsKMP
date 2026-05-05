@@ -2,6 +2,7 @@ package com.redred.mapmyshots.di
 
 import com.redred.mapmyshots.model.Asset
 import com.redred.mapmyshots.service.ExifService
+import com.redred.mapmyshots.service.IgnoredPhotoService
 import com.redred.mapmyshots.service.PhotoService
 import com.redred.mapmyshots.service.SimilarityService
 import com.redred.mapmyshots.viewmodel.PhotoDetailsViewModel
@@ -12,6 +13,7 @@ val sharedModule = module {
 
     single { ExifService(get()) }
     single { PhotoService(get(), get()) }
+    single { IgnoredPhotoService(get(), get()) }
     single { SimilarityService(get(), get()) }
 
     factory { (photo: Asset) ->
@@ -24,5 +26,5 @@ val sharedModule = module {
         )
     }
 
-    factory { PhotoListViewModel(get()) }
+    factory { PhotoListViewModel(get(), get()) }
 }

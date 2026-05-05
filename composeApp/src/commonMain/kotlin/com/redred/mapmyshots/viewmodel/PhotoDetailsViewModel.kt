@@ -34,7 +34,7 @@ sealed interface PhotoDetailsIntent {
 }
 
 sealed interface PhotoDetailsEvent {
-    data object Saved : PhotoDetailsEvent
+    data class Saved(val locationName: String) : PhotoDetailsEvent
     data object Deleted : PhotoDetailsEvent
     data object DeleteFailed : PhotoDetailsEvent
     data class Error(val reason: PhotoDetailsError) : PhotoDetailsEvent
@@ -112,7 +112,8 @@ class PhotoDetailsViewModel(
 
             val ok = exif.writeLatLon(photo, pair.first, pair.second)
             if (ok) {
-                _events.tryEmit(PhotoDetailsEvent.Saved)
+                val locationName = exif.getLocationName(src, geocoder)
+                _events.tryEmit(PhotoDetailsEvent.Saved(locationName = locationName))
             } else {
                 _events.tryEmit(PhotoDetailsEvent.Error(PhotoDetailsError.WriteFailed))
             }

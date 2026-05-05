@@ -22,12 +22,14 @@ import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import com.redred.mapmyshots.model.Asset
+import com.redred.mapmyshots.ui.components.EmptyPhotoListState
 import com.redred.mapmyshots.ui.components.FullScreenLoadingState
 import com.redred.mapmyshots.ui.components.GalleryHeader
 import com.redred.mapmyshots.ui.components.InlineLoadingState
 import com.redred.mapmyshots.ui.components.PhotoGridCard
 import com.redred.mapmyshots.ui.theme.*
 import com.redred.mapmyshots.viewmodel.LoadProgress
+import com.redred.mapmyshots.viewmodel.PhotoListTab
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
 import kotlin.time.ExperimentalTime
@@ -38,17 +40,25 @@ internal fun PhotoListScreenContent(
     gridState: LazyGridState,
     isLoading: Boolean,
     isLoadingMore: Boolean,
+    isLoadingIgnored: Boolean,
     progress: LoadProgress,
-    photos: List<Asset>,
+    selectedTab: PhotoListTab,
+    reviewPhotos: List<Asset>,
+    ignoredPhotos: List<Asset>,
     onOpen: (Asset) -> Unit,
     onLoadMore: () -> Unit,
     onLongPress: (Asset) -> Unit
 ) {
     val latestLoading by rememberUpdatedState(isLoading)
     val latestLoadingMore by rememberUpdatedState(isLoadingMore)
-    val visiblePhotos = remember(photos) { photos }
+    val visiblePhotos = remember(selectedTab, reviewPhotos, ignoredPhotos) {
+        when (selectedTab) {
+            PhotoListTab.Review -> reviewPhotos
+            PhotoListTab.Ignored -> ignoredPhotos
+        }
+    }
 
-    LaunchedEffect(gridState) {
+    LaunchedEffect(gridState, selectedTab) {
         snapshotFlow { gridState.layoutInfo }
             .map { info ->
                 val last = info.visibleItemsInfo.lastOrNull()?.index ?: 0
@@ -56,7 +66,13 @@ internal fun PhotoListScreenContent(
             }
             .distinctUntilChanged()
             .collect { (lastVisible, totalItems) ->
-                if (!latestLoading && !latestLoadingMore && totalItems > 0 && lastVisible >= totalItems - 2) {
+                if (
+                    selectedTab == PhotoListTab.Review &&
+                    !latestLoading &&
+                    !latestLoadingMore &&
+                    totalItems > 0 &&
+                    lastVisible >= totalItems - 2
+                ) {
                     onLoadMore()
                 }
             }
@@ -71,6 +87,16 @@ internal fun PhotoListScreenContent(
             return@Surface
         }
 
+        if (selectedTab == PhotoListTab.Ignored && isLoadingIgnored && visiblePhotos.isEmpty()) {
+            FullScreenLoadingState()
+            return@Surface
+        }
+
+        if (visiblePhotos.isEmpty()) {
+            EmptyPhotoListState(selectedTab = selectedTab)
+            return@Surface
+        }
+
         LazyVerticalGrid(
             state = gridState,
             columns = GridCells.Adaptive(minSize = MapMyShotsSizes.galleryMinCell),
@@ -81,8 +107,13 @@ internal fun PhotoListScreenContent(
         ) {
             item(span = { GridItemSpan(maxLineSpan) }) {
                 GalleryHeader(
-                    count = if (progress.found > visiblePhotos.size) progress.found else visiblePhotos.size,
-                    progress = progress
+                    selectedTab = selectedTab,
+                    count = when (selectedTab) {
+                        PhotoListTab.Review ->
+                            if (progress.found > visiblePhotos.size) progress.found else visiblePhotos.size
+                        PhotoListTab.Ignored -> visiblePhotos.size
+                    },
+                    progress = progress,
                 )
             }
 
@@ -131,8 +162,11 @@ private fun PhotoListScreenContentPreview() {
             gridState = rememberLazyGridState(),
             isLoading = false,
             isLoadingMore = false,
+            isLoadingIgnored = false,
             progress = LoadProgress(scanned = 120, total = 120, found = assets.size, active = false),
-            photos = assets,
+            selectedTab = PhotoListTab.Review,
+            reviewPhotos = assets,
+            ignoredPhotos = emptyList(),
             onOpen = {},
             onLoadMore = {},
             onLongPress = {}
