@@ -89,6 +89,28 @@ class PhotoDetailsViewModelTest {
         vm.clear()
     }
 
+    @Test
+    fun applyManualLocationWritesCoordinatesAndEmitsSavedLocation() = runBlocking {
+        val target = asset("target", 1000)
+        val exif = FakeExifPlatform(latLon = emptyMap())
+        val vm = viewModel(
+            target = target,
+            repo = RecordingPhotoRepository(emptyList()),
+            exifPlatform = exif
+        )
+
+        val event = async { withTimeout(1_000) { vm.events.first() } }
+        yield()
+
+        vm.onIntent(PhotoDetailsIntent.ApplyManualLocation(52.52, 13.405))
+
+        assertEquals(PhotoDetailsEvent.Saved("Test Location"), event.await())
+        assertEquals(listOf(Write(target.id, 52.52, 13.405)), exif.writes)
+        assertEquals(52.52 to 13.405, vm.uiState.value.currentLocation)
+
+        vm.clear()
+    }
+
     private fun viewModel(
         target: Asset,
         repo: RecordingPhotoRepository,
@@ -136,6 +158,12 @@ private data class Window(
     val max: Instant
 )
 
+private data class Write(
+    val assetId: String,
+    val lat: Double,
+    val lon: Double
+)
+
 private class RecordingPhotoRepository(
     private val imagesBetween: List<Asset>
 ) : PhotoRepository {
@@ -161,9 +189,14 @@ private class FakeExifPlatform(
     private val latLon: Map<String, Pair<Double, Double>?>,
     private val writeResult: Boolean = true
 ) : ExifPlatform {
+    val writes = mutableListOf<Write>()
+
     override suspend fun readLatLon(asset: Asset): Pair<Double, Double>? = latLon[asset.id]
 
-    override suspend fun writeLatLon(asset: Asset, lat: Double, lon: Double): Boolean = writeResult
+    override suspend fun writeLatLon(asset: Asset, lat: Double, lon: Double): Boolean {
+        writes += Write(asset.id, lat, lon)
+        return writeResult
+    }
 }
 
 private class FakeGeocoderPlatform : GeocoderPlatform {
