@@ -133,12 +133,12 @@ private fun StatCard(
         modifier = Modifier.width(MapMyShotsSizes.headerStatCardWidth)
     ) {
         Column(
-            modifier = Modifier.padding(horizontal = MapMyShotsSpacing.xxl, vertical = MapMyShotsSpacing.xl)
+            modifier = Modifier.padding(horizontal = MapMyShotsSpacing.lg, vertical = MapMyShotsSpacing.md)
         ) {
             Text(
                 text = value.toString(),
-                fontSize = MapMyShotsTypography.statValue,
-                fontWeight = FontWeight.Bold,
+                fontSize = MapMyShotsTypography.suggestionTitle,
+                fontWeight = FontWeight.Normal,
                 color = MapMyShotsColors.textPrimary
             )
 

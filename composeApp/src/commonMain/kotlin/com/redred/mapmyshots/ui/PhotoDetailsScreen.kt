@@ -99,9 +99,6 @@ fun PhotoDetailsScreen(
         onAssetClicked = { asset ->
             pendingApplyFrom = asset
         },
-        onChooseLocationOnMap = {
-            showLocationPicker = true
-        },
         onDelete = {
             pendingDelete = true
         },
