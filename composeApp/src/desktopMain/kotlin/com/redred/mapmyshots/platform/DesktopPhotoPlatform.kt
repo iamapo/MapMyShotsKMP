@@ -34,6 +34,15 @@ class DesktopPhotoRepository : PhotoRepository {
         )
     }
 
+    override suspend fun listImagesByIds(ids: List<String>): List<Asset> {
+        if (ids.isEmpty()) return emptyList()
+
+        val idOrder = ids.withIndex().associate { it.value to it.index }
+        return loadImages()
+            .filter { it.id in idOrder }
+            .sortedBy { idOrder[it.id] ?: Int.MAX_VALUE }
+    }
+
     override suspend fun listAllImages(limitPerAlbum: Int): List<Asset> = loadImages()
 
     override suspend fun listImagesBetween(min: Instant, max: Instant): List<Asset> {

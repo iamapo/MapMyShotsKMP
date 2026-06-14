@@ -9,6 +9,7 @@ import com.redred.mapmyshots.service.SimilarityService
 import com.redred.mapmyshots.util.getTimeRangeDuration
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -64,6 +65,9 @@ class PhotoDetailsViewModel(
     private val _events = MutableSharedFlow<PhotoDetailsEvent>(extraBufferCapacity = 1)
     val events: SharedFlow<PhotoDetailsEvent> = _events.asSharedFlow()
 
+    private var loadSimilarJob: Job? = null
+    private var loadGeneration = 0L
+
     fun clear() {
         job.cancel()
     }
@@ -84,7 +88,9 @@ class PhotoDetailsViewModel(
     }
 
     fun loadSimilar() {
-        scope.launch {
+        val generation = ++loadGeneration
+        loadSimilarJob?.cancel()
+        loadSimilarJob = scope.launch {
             _uiState.update { it.copy(loading = true) }
             try {
                 val currentRange = _uiState.value.timeWindow
@@ -96,16 +102,21 @@ class PhotoDetailsViewModel(
                     exif.getLatLon(a)?.let { locations[a.id] = it }
                     names[a.id] = exif.getLocationName(a, geocoder)
                 }
-                _uiState.update {
-                    it.copy(
-                        similar = list,
-                        locationNames = names,
-                        currentLocation = exif.getLatLon(photo),
-                        suggestionLocations = locations
-                    )
+                val currentLocation = exif.getLatLon(photo)
+                if (generation == loadGeneration) {
+                    _uiState.update {
+                        it.copy(
+                            similar = list,
+                            locationNames = names,
+                            currentLocation = currentLocation,
+                            suggestionLocations = locations
+                        )
+                    }
                 }
             } finally {
-                _uiState.update { it.copy(loading = false) }
+                if (generation == loadGeneration) {
+                    _uiState.update { it.copy(loading = false) }
+                }
             }
         }
     }

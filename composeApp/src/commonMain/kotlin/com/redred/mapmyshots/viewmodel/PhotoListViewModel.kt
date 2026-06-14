@@ -3,6 +3,7 @@ package com.redred.mapmyshots.viewmodel
 import com.redred.mapmyshots.model.Asset
 import com.redred.mapmyshots.service.IgnoredPhotoService
 import com.redred.mapmyshots.service.PhotoService
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -55,6 +56,7 @@ sealed interface PhotoListIntent {
 
 sealed interface PhotoListEvent {
     data object DeleteFailed : PhotoListEvent
+    data object LoadFailed : PhotoListEvent
 }
 
 class PhotoListViewModel(
@@ -111,7 +113,8 @@ class PhotoListViewModel(
 
             var first = true
             while (!endReached && _uiState.value.reviewPhotos.size < minInitialHits) {
-                loadChunk(reset = first)
+                val loaded = loadChunk(reset = first)
+                if (!loaded) break
                 first = false
             }
         }
@@ -132,7 +135,7 @@ class PhotoListViewModel(
         }
     }
 
-    private suspend fun loadChunk(reset: Boolean) {
+    private suspend fun loadChunk(reset: Boolean): Boolean {
         _uiState.update { state ->
             state.copy(
                 isLoading = if (reset) true else state.isLoading,
@@ -184,6 +187,12 @@ class PhotoListViewModel(
                     }
                 }
             }
+            return true
+        } catch (error: CancellationException) {
+            throw error
+        } catch (_: Throwable) {
+            _events.tryEmit(PhotoListEvent.LoadFailed)
+            return false
         } finally {
             _uiState.update { state ->
                 state.copy(
@@ -230,7 +239,8 @@ class PhotoListViewModel(
             }
 
             while (!endReached && _uiState.value.reviewPhotos.size < minInitialHits) {
-                loadChunk(reset = false)
+                val loaded = loadChunk(reset = false)
+                if (!loaded) break
             }
         }
     }
