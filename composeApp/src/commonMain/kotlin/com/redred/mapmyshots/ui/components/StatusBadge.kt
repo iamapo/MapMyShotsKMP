@@ -27,14 +27,14 @@ internal fun StatusBadge(
     Row(
         modifier = modifier
             .clip(MapMyShotsShapes.pill)
-            .background(MapMyShotsColors.badgeBackground)
-            .padding(horizontal = MapMyShotsSpacing.sm, vertical = MapMyShotsSpacing.xxs),
+            .background(if (success) MapMyShotsColors.successBackground else MapMyShotsColors.warningBackground)
+            .padding(horizontal = MapMyShotsSpacing.md, vertical = MapMyShotsSpacing.xs),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Icon(
             imageVector = Icons.Filled.LocationOn,
             contentDescription = null,
-            tint = if (success) MapMyShotsColors.successAccent else MapMyShotsColors.onImage
+            tint = if (success) MapMyShotsColors.success else MapMyShotsColors.warning
         )
 
         Spacer(Modifier.width(MapMyShotsSpacing.xs))
@@ -43,7 +43,7 @@ internal fun StatusBadge(
             text = text,
             fontSize = MapMyShotsTypography.caption,
             fontWeight = FontWeight.SemiBold,
-            color = MapMyShotsColors.onImage
+            color = if (success) MapMyShotsColors.success else MapMyShotsColors.warning
         )
     }
 }

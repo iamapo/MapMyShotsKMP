@@ -113,7 +113,7 @@ internal fun PhotoDetailsScreenContent(
                 .statusBarsPadding()
                 .fillMaxSize(),
             contentPadding = PaddingValues(MapMyShotsSpacing.screen),
-            verticalArrangement = Arrangement.spacedBy(MapMyShotsSpacing.screen - MapMyShotsSpacing.xxs)
+            verticalArrangement = Arrangement.spacedBy(MapMyShotsSpacing.xxl)
         ) {
             item {
                 DetailTopBar(
@@ -132,10 +132,7 @@ internal fun PhotoDetailsScreenContent(
                             .fillMaxWidth()
                             .height(MapMyShotsSizes.detailHeroHeight)
                             .clip(MapMyShotsShapes.hero)
-                            .shadow(
-                                elevation = 4.dp,
-                                shape = MapMyShotsShapes.card
-                            )
+                            .shadow(elevation = 1.dp, shape = MapMyShotsShapes.card)
                     )
 
                     StatusBadge(
@@ -145,6 +142,7 @@ internal fun PhotoDetailsScreenContent(
                         success = hasLocation,
                         modifier = Modifier
                             .align(Alignment.TopStart)
+                            .align(Alignment.BottomStart)
                             .padding(MapMyShotsSpacing.xl)
                     )
                 }

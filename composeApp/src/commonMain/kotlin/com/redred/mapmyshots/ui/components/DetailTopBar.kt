@@ -1,6 +1,7 @@
 package com.redred.mapmyshots.ui.components
 
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -49,13 +50,14 @@ internal fun DetailTopBar(
             modifier = Modifier
                 .size(MapMyShotsSizes.detailBackButton)
                 .clip(CircleShape)
+                .background(MapMyShotsColors.surfaceMuted)
                 .clickable(onClick = onBack),
             contentAlignment = Alignment.Center
         ) {
             Icon(
                 imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                 contentDescription = null,
-                tint = MapMyShotsColors.primary
+                tint = MapMyShotsColors.textPrimary
             )
         }
 
@@ -63,7 +65,7 @@ internal fun DetailTopBar(
 
         Text(
             text = stringResource(Res.string.details_title),
-            fontSize = MapMyShotsTypography.detailTitle,
+            fontSize = MapMyShotsTypography.sectionTitle,
             fontWeight = FontWeight.Bold,
             color = MapMyShotsColors.textPrimary
         )
@@ -75,13 +77,14 @@ internal fun DetailTopBar(
                 modifier = Modifier
                     .size(MapMyShotsSizes.detailBackButton)
                     .clip(CircleShape)
+                    .background(MapMyShotsColors.surfaceMuted)
                     .clickable(onClick = onToggleIgnored),
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
                     imageVector = if (isIgnored) Icons.Filled.Visibility else Icons.Filled.VisibilityOff,
                     contentDescription = null,
-                    tint = MapMyShotsColors.primary,
+                    tint = MapMyShotsColors.textPrimary,
                 )
             }
             Spacer(Modifier.width(MapMyShotsSpacing.xs))
@@ -92,13 +95,14 @@ internal fun DetailTopBar(
                 modifier = Modifier
                     .size(MapMyShotsSizes.detailBackButton)
                     .clip(CircleShape)
+                    .background(MapMyShotsColors.surfaceMuted)
                     .clickable(onClick = onDelete),
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
                     imageVector = Icons.Filled.Delete,
                     contentDescription = null,
-                    tint = MapMyShotsColors.primary,
+                    tint = MapMyShotsColors.textPrimary,
                 )
             }
         }

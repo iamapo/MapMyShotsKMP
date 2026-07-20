@@ -1,21 +1,17 @@
 package com.redred.mapmyshots.ui.components
 
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -25,7 +21,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import com.redred.mapmyshots.ui.theme.MapMyShotsColors
 import com.redred.mapmyshots.ui.theme.MapMyShotsShapes
-import com.redred.mapmyshots.ui.theme.MapMyShotsSizes
 import com.redred.mapmyshots.ui.theme.MapMyShotsSpacing
 import com.redred.mapmyshots.ui.theme.MapMyShotsStroke
 import com.redred.mapmyshots.ui.theme.MapMyShotsTypography
@@ -34,9 +29,6 @@ import com.redred.mapmyshots.viewmodel.PhotoListTab
 import mapmyshots.composeapp.generated.resources.Res
 import mapmyshots.composeapp.generated.resources.bottom_nav_ignored
 import mapmyshots.composeapp.generated.resources.bottom_nav_review
-import mapmyshots.composeapp.generated.resources.gallery_stat_ignored
-import mapmyshots.composeapp.generated.resources.gallery_stat_open
-import mapmyshots.composeapp.generated.resources.gallery_stat_scanned
 import mapmyshots.composeapp.generated.resources.ignored_photos_count
 import mapmyshots.composeapp.generated.resources.photos_without_location_count
 import mapmyshots.composeapp.generated.resources.photos_without_location_count_loading
@@ -84,34 +76,25 @@ internal fun GalleryHeader(
             )
         }
 
-        Spacer(Modifier.height(MapMyShotsSpacing.xxl))
-
-        FlowRow(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(MapMyShotsSpacing.xl),
-            verticalArrangement = Arrangement.spacedBy(MapMyShotsSpacing.xl)
-        ) {
-            StatCard(value = progress.scanned, label = stringResource(Res.string.gallery_stat_scanned))
-            StatCard(value = reviewCount, label = stringResource(Res.string.gallery_stat_open))
-            if (ignoredCount > 0) {
-                StatCard(value = ignoredCount, label = stringResource(Res.string.gallery_stat_ignored))
-            }
-        }
-
-        Spacer(Modifier.height(MapMyShotsSpacing.xxl))
-
-        FlowRow(
-            horizontalArrangement = Arrangement.spacedBy(MapMyShotsSpacing.md),
-            verticalArrangement = Arrangement.spacedBy(MapMyShotsSpacing.md)
-        ) {
-
-            if (ignoredCount > 0) {
+        if (ignoredCount > 0) {
+            Spacer(Modifier.height(MapMyShotsSpacing.screen))
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(MapMyShotsShapes.pill)
+                    .background(MapMyShotsColors.surfaceMuted)
+                    .border(MapMyShotsStroke.thin, MapMyShotsColors.border, MapMyShotsShapes.pill)
+                    .padding(MapMyShotsSpacing.xxs),
+                horizontalArrangement = Arrangement.spacedBy(MapMyShotsSpacing.xxs)
+            ) {
                 HeaderTabChip(
+                    modifier = Modifier.weight(1f),
                     label = stringResource(Res.string.bottom_nav_review),
                     selected = selectedTab == PhotoListTab.Review,
                     onClick = { onSelectTab(PhotoListTab.Review) }
                 )
                 HeaderTabChip(
+                    modifier = Modifier.weight(1f),
                     label = stringResource(Res.string.bottom_nav_ignored),
                     selected = selectedTab == PhotoListTab.Ignored,
                     onClick = { onSelectTab(PhotoListTab.Ignored) }
@@ -122,59 +105,26 @@ internal fun GalleryHeader(
 }
 
 @Composable
-private fun StatCard(
-    value: Int,
-    label: String
-) {
-    Surface(
-        shape = MapMyShotsShapes.hero,
-        color = MapMyShotsColors.surface,
-        border = BorderStroke(MapMyShotsStroke.thin, MapMyShotsColors.border),
-        modifier = Modifier.width(MapMyShotsSizes.headerStatCardWidth)
-    ) {
-        Column(
-            modifier = Modifier.padding(horizontal = MapMyShotsSpacing.lg, vertical = MapMyShotsSpacing.md)
-        ) {
-            Text(
-                text = value.toString(),
-                fontSize = MapMyShotsTypography.suggestionTitle,
-                fontWeight = FontWeight.Normal,
-                color = MapMyShotsColors.textPrimary
-            )
-
-            Text(
-                text = label,
-                fontSize = MapMyShotsTypography.suggestionTitle,
-                color = MapMyShotsColors.textMuted
-            )
-        }
-    }
-}
-
-@Composable
 private fun HeaderTabChip(
+    modifier: Modifier = Modifier,
     label: String,
     selected: Boolean,
     onClick: () -> Unit
 ) {
-    val background = if (selected) MapMyShotsColors.primary else MapMyShotsColors.surface
-    val textColor = if (selected) MapMyShotsColors.onImage else MapMyShotsColors.textValue
+    val background = if (selected) MapMyShotsColors.surface else MapMyShotsColors.transparent
+    val textColor = if (selected) MapMyShotsColors.primary else MapMyShotsColors.textValue
     Box(
-        modifier = Modifier
+        modifier = modifier
             .clip(MapMyShotsShapes.pill)
             .background(background)
-            .border(
-                width = MapMyShotsStroke.thin,
-                color = if (selected) MapMyShotsColors.primary else MapMyShotsColors.border,
-                shape = MapMyShotsShapes.pill
-            )
             .clickable(onClick = onClick)
-            .padding(horizontal = MapMyShotsSpacing.lg, vertical = MapMyShotsSpacing.xxxs)
+            .padding(horizontal = MapMyShotsSpacing.lg, vertical = MapMyShotsSpacing.md),
+        contentAlignment = Alignment.Center
     ) {
         Text(
             text = label,
             fontSize = MapMyShotsTypography.suggestionTitle,
-            fontWeight = FontWeight.Normal,
+            fontWeight = FontWeight.SemiBold,
             color = textColor
         )
     }

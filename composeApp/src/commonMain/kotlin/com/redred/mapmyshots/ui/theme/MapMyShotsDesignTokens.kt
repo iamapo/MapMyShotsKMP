@@ -6,18 +6,23 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
 internal object MapMyShotsColors {
-    val primary = Color(0xFF0B63E5)
-    val background = Color.White
+    val primary = Color(0xFF0866E8)
+    val background = Color(0xFFFFFCF9)
     val surface = Color.White
-    val surfaceSelected = primary.copy(alpha = 0.06f)
+    val surfaceSelected = Color(0xFFEAF2FF)
+    val surfaceMuted = Color(0xFFF5F6F8)
+    val teal = Color(0xFF079A98)
+    val tealBackground = Color(0xFFE8F7F6)
+    val warning = Color(0xFFC94D21)
+    val warningBackground = Color(0xFFFFE9DF)
     val transparent = Color.Transparent
     val onImage = Color.White
-    val textPrimary = Color(0xFF101828)
-    val textSecondary = Color(0xFF667085)
-    val textMuted = Color(0xFF557099)
+    val textPrimary = Color(0xFF071226)
+    val textSecondary = Color(0xFF5C6980)
+    val textMuted = Color(0xFF647089)
     val textValue = Color(0xFF475467)
-    val border = Color(0xFFD0D5DD)
-    val divider = Color(0xFFE4E7EC)
+    val border = Color(0xFFDDE1E8)
+    val divider = Color(0xFFE8EBF0)
     val badgeBackground = Color(0xCC344054)
     val imageOverlay = Color.Black.copy(alpha = 0.12f)
     val success = Color(0xFF16803C)
@@ -35,7 +40,7 @@ internal object MapMyShotsSpacing {
     val lg = 12.dp
     val xl = 14.dp
     val xxl = 16.dp
-    val screen = 20.dp
+    val screen = 18.dp
     val bottomSpacer = 24.dp
 }
 
@@ -44,11 +49,11 @@ internal object MapMyShotsSizes {
     val headerStatCardWidth = 105.dp
     val listLoading = 40.dp
     val loadMore = 28.dp
-    val photoCardImageHeight = 138.dp
+    val photoCardImageHeight = 224.dp
     val selectedBadge = 34.dp
     val detailTopBarHeight = 48.dp
     val detailBackButton = 42.dp
-    val detailHeroHeight = 270.dp
+    val detailHeroHeight = 390.dp
     val detailsLoadingHeight = 96.dp
     val iconButton = 44.dp
     val metadataRowHeight = 52.dp
@@ -69,7 +74,7 @@ internal object MapMyShotsStroke {
 
 internal object MapMyShotsShapes {
     val sm = RoundedCornerShape(16.dp)
-    val card = RoundedCornerShape(18.dp)
+    val card = RoundedCornerShape(20.dp)
     val suggestionImage = RoundedCornerShape(topStart = 18.dp, bottomStart = 18.dp)
     val metadataCard = RoundedCornerShape(22.dp)
     val hero = RoundedCornerShape(24.dp)
@@ -90,6 +95,6 @@ internal object MapMyShotsTypography {
     val sectionTitle = 22.sp
     val detailTitle = 25.sp
     val iconButton = 28.sp
-    val heroTitle = 32.sp
+    val heroTitle = 38.sp
     val backArrow = 32.sp
 }
