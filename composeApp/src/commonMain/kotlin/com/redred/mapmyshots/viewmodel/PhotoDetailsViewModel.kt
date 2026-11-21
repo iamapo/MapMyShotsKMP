@@ -7,6 +7,8 @@ import com.redred.mapmyshots.service.ExifService
 import com.redred.mapmyshots.service.PhotoService
 import com.redred.mapmyshots.service.SimilarityService
 import com.redred.mapmyshots.util.getTimeRangeDuration
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -38,7 +40,7 @@ sealed interface PhotoDetailsIntent {
 }
 
 sealed interface PhotoDetailsEvent {
-    data class Saved(val locationName: String) : PhotoDetailsEvent
+    data class Saved(val locationName: String?) : PhotoDetailsEvent
     data object Deleted : PhotoDetailsEvent
     data object DeleteFailed : PhotoDetailsEvent
     data class Error(val reason: PhotoDetailsError) : PhotoDetailsEvent
@@ -55,9 +57,8 @@ class PhotoDetailsViewModel(
     private val photoService: PhotoService,
     private val sim: SimilarityService,
     private val geocoder: GeocoderPlatform,
-) {
-    private val job = SupervisorJob()
-    private val scope = CoroutineScope(Dispatchers.Default + job)
+    scope: CoroutineScope = CoroutineScope(Dispatchers.Default + SupervisorJob())
+) : ViewModel(scope) {
 
     private val _uiState = MutableStateFlow(PhotoDetailsUiState())
     val uiState: StateFlow<PhotoDetailsUiState> = _uiState.asStateFlow()
@@ -67,10 +68,6 @@ class PhotoDetailsViewModel(
 
     private var loadSimilarJob: Job? = null
     private var loadGeneration = 0L
-
-    fun clear() {
-        job.cancel()
-    }
 
     fun onIntent(intent: PhotoDetailsIntent) {
         when (intent) {
@@ -90,7 +87,7 @@ class PhotoDetailsViewModel(
     fun loadSimilar() {
         val generation = ++loadGeneration
         loadSimilarJob?.cancel()
-        loadSimilarJob = scope.launch {
+        loadSimilarJob = viewModelScope.launch {
             _uiState.update { it.copy(loading = true) }
             try {
                 val currentRange = _uiState.value.timeWindow
@@ -98,9 +95,10 @@ class PhotoDetailsViewModel(
 
                 val names = mutableMapOf<String, String>()
                 val locations = mutableMapOf<String, Pair<Double, Double>>()
-                for (a in list) {
-                    exif.getLatLon(a)?.let { locations[a.id] = it }
-                    names[a.id] = exif.getLocationName(a, geocoder)
+                for (asset in list) {
+                    val latLon = exif.getLatLon(asset) ?: continue
+                    locations[asset.id] = latLon
+                    exif.getLocationName(latLon.first, latLon.second, geocoder)?.let { names[asset.id] = it }
                 }
                 val currentLocation = exif.getLatLon(photo)
                 if (generation == loadGeneration) {
@@ -122,38 +120,36 @@ class PhotoDetailsViewModel(
     }
 
     fun applyLocationFrom(src: Asset) {
-        scope.launch {
+        viewModelScope.launch {
             val pair = exif.getLatLon(src)
             if (pair == null) {
                 _events.tryEmit(PhotoDetailsEvent.Error(PhotoDetailsError.MissingSourceLocation))
                 return@launch
             }
 
-            val ok = exif.writeLatLon(photo, pair.first, pair.second)
-            if (ok) {
-                val locationName = exif.getLocationName(src, geocoder)
-                _events.tryEmit(PhotoDetailsEvent.Saved(locationName = locationName))
-            } else {
-                _events.tryEmit(PhotoDetailsEvent.Error(PhotoDetailsError.WriteFailed))
-            }
+            saveLocation(pair.first, pair.second)
         }
     }
 
     fun applyManualLocation(lat: Double, lon: Double) {
-        scope.launch {
-            val ok = exif.writeLatLon(photo, lat, lon)
-            if (ok) {
-                val locationName = geocoder.reverseGeocode(lat, lon) ?: "Location Unknown"
-                _uiState.update { it.copy(currentLocation = lat to lon) }
-                _events.tryEmit(PhotoDetailsEvent.Saved(locationName = locationName))
-            } else {
-                _events.tryEmit(PhotoDetailsEvent.Error(PhotoDetailsError.WriteFailed))
-            }
+        viewModelScope.launch {
+            saveLocation(lat, lon)
+        }
+    }
+
+    private suspend fun saveLocation(lat: Double, lon: Double) {
+        val ok = exif.writeLatLon(photo, lat, lon)
+        if (ok) {
+            val locationName = exif.getLocationName(lat, lon, geocoder)
+            _uiState.update { it.copy(currentLocation = lat to lon) }
+            _events.tryEmit(PhotoDetailsEvent.Saved(locationName = locationName))
+        } else {
+            _events.tryEmit(PhotoDetailsEvent.Error(PhotoDetailsError.WriteFailed))
         }
     }
 
     fun delete() {
-        scope.launch {
+        viewModelScope.launch {
             val ok = photoService.deleteAsset(photo)
             if (ok) {
                 _events.tryEmit(PhotoDetailsEvent.Deleted)

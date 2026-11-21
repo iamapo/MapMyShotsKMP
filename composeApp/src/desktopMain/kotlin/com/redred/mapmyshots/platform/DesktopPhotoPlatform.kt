@@ -43,8 +43,6 @@ class DesktopPhotoRepository : PhotoRepository {
             .sortedBy { idOrder[it.id] ?: Int.MAX_VALUE }
     }
 
-    override suspend fun listAllImages(limitPerAlbum: Int): List<Asset> = loadImages()
-
     override suspend fun listImagesBetween(min: Instant, max: Instant): List<Asset> {
         return loadImages().filter { it.takenAt >= min && it.takenAt <= max }
     }

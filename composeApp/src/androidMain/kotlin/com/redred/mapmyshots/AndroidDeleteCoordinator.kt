@@ -17,7 +17,8 @@ object AndroidDeleteCoordinator {
         launcher = null
     }
 
-    suspend fun requestDeletePermission(intentSender: IntentSender): Boolean =
+    /** Shows a system consent dialog (delete/write request) and suspends until the user answers. */
+    suspend fun requestUserConsent(intentSender: IntentSender): Boolean =
         suspendCancellableCoroutine { continuation ->
             val currentLauncher = launcher
             if (currentLauncher == null) {
@@ -44,7 +45,7 @@ object AndroidDeleteCoordinator {
             currentLauncher(intentSender)
         }
 
-    fun onDeletePermissionResult(granted: Boolean) {
+    fun onUserConsentResult(granted: Boolean) {
         val continuation = synchronized(this) {
             pendingContinuation.also { pendingContinuation = null }
         }

@@ -35,34 +35,6 @@ class IOSPhotoRepository : PhotoRepository {
         return ids.mapNotNull(assetsById::get)
     }
 
-    @OptIn(ExperimentalForeignApi::class, ExperimentalTime::class)
-    override suspend fun listAllImages(limitPerAlbum: Int): List<Asset> {
-        val options = PHFetchOptions().apply {
-            sortDescriptors = listOf(NSSortDescriptor(key = "creationDate", ascending = false))
-
-            if (limitPerAlbum > 0) {
-                try {
-                    fetchLimit = limitPerAlbum.toULong()
-                } catch (_: Throwable) {
-                }
-            }
-        }
-
-        val fetchResult = PHAsset.fetchAssetsWithMediaType(
-            mediaType = PHAssetMediaTypeImage,
-            options = options
-        )
-
-        val out = mutableListOf<Asset>()
-
-        fetchResult.enumerateObjectsUsingBlock { obj, _, _ ->
-            val asset = obj as? PHAsset ?: return@enumerateObjectsUsingBlock
-            out += asset.toAsset(displayName = "")
-        }
-
-        return out
-    }
-
     @OptIn(ExperimentalTime::class, ExperimentalForeignApi::class)
     override suspend fun listImagesBetween(min: Instant, max: Instant): List<Asset> {
         val minDate = NSDate.dateWithTimeIntervalSince1970(min.toEpochMilliseconds().toDouble() / 1000.0)

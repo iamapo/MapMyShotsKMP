@@ -2,7 +2,6 @@ package com.redred.mapmyshots.ui
 
 import androidx.compose.foundation.lazy.grid.LazyGridState
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -22,21 +21,14 @@ import com.redred.mapmyshots.viewmodel.PhotoListViewModel
 import mapmyshots.composeapp.generated.resources.Res
 import mapmyshots.composeapp.generated.resources.delete_failed
 import mapmyshots.composeapp.generated.resources.load_failed
-import org.koin.compose.koinInject
 import org.jetbrains.compose.resources.stringResource
 
 @Composable
 fun PhotoListScreen(
     onOpen: (Asset) -> Unit,
-    vm: PhotoListViewModel = koinInject(),
-    gridState: LazyGridState = rememberSaveable(saver = LazyGridState.Saver) { LazyGridState() },
-    clearOnDispose: Boolean = true
+    vm: PhotoListViewModel,
+    gridState: LazyGridState = rememberSaveable(saver = LazyGridState.Saver) { LazyGridState() }
 ) {
-    DisposableEffect(vm, clearOnDispose) {
-        onDispose {
-            if (clearOnDispose) vm.clear()
-        }
-    }
     LaunchedEffect(Unit) { vm.onIntent(PhotoListIntent.LoadFirstPage) }
 
     val uiState by vm.uiState.collectAsState()
@@ -72,8 +64,7 @@ fun PhotoListScreen(
         onLongPress = { asset -> selectedAsset = asset }
     )
 
-    if (selectedAsset != null) {
-        val asset = selectedAsset!!
+    selectedAsset?.let { asset ->
         val isIgnored = uiState.selectedTab == PhotoListTab.Ignored
         PhotoListAssetActionsDialog(
             isIgnored = isIgnored,
@@ -95,8 +86,7 @@ fun PhotoListScreen(
         )
     }
 
-    if (pendingDelete != null) {
-        val asset = pendingDelete!!
+    pendingDelete?.let { asset ->
         ConfirmDeletePhotoDialog(
             onDismiss = { pendingDelete = null },
             onConfirm = {
@@ -106,9 +96,9 @@ fun PhotoListScreen(
         )
     }
 
-    if (errorMessage != null) {
+    errorMessage?.let { message ->
         ErrorDialog(
-            message = errorMessage!!,
+            message = message,
             onDismiss = { errorMessage = null }
         )
     }

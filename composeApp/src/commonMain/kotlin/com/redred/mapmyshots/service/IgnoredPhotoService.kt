@@ -22,10 +22,6 @@ class IgnoredPhotoService(
         store.setIgnoredAssetIds(updated)
     }
 
-    suspend fun clear(assetId: String) {
-        restore(assetId)
-    }
-
     suspend fun loadIgnoredAssets(): List<Asset> {
         val ids = store.getIgnoredAssetIds().toList()
         if (ids.isEmpty()) return emptyList()

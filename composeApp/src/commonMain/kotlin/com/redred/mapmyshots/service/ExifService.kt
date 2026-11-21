@@ -3,39 +3,69 @@ package com.redred.mapmyshots.service
 import com.redred.mapmyshots.model.Asset
 import com.redred.mapmyshots.platform.ExifPlatform
 import com.redred.mapmyshots.platform.GeocoderPlatform
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
+import kotlin.math.roundToLong
 
 class ExifService(private val exifPlatform: ExifPlatform) {
-    private val cache = mutableMapOf<String, Pair<Double, Double>?>()
-    private val nameCache = mutableMapOf<String, String>()
+    // Accessed from parallel IO coroutines, so every map access goes through the mutex.
+    private val cacheMutex = Mutex()
+    private val latLonMap = mutableMapOf<String, Pair<Double, Double>?>()
+    private val placeNameMap = mutableMapOf<Pair<Long, Long>, String>()
 
     suspend fun hasLatLon(asset: Asset): Boolean {
         asset.hasLocation?.let { return it }
         return getLatLon(asset) != null
     }
 
-    suspend fun getLat(asset: Asset): Double? = getLatLon(asset)?.first
-    suspend fun getLon(asset: Asset): Double? = getLatLon(asset)?.second
-
+    /** Returns null when the photo has no GPS data or cannot be read. Read errors are not cached. */
     suspend fun getLatLon(asset: Asset): Pair<Double, Double>? {
-        if (cache.containsKey(asset.id)) {
-            return cache[asset.id]
+        cacheMutex.withLock {
+            if (latLonMap.containsKey(asset.id)) {
+                return latLonMap[asset.id]
+            }
         }
-        return exifPlatform.readLatLon(asset).also { cache[asset.id] = it }
+        val latLon = try {
+            exifPlatform.readLatLon(asset)
+        } catch (error: CancellationException) {
+            throw error
+        } catch (_: Exception) {
+            return null
+        }
+        cacheMutex.withLock {
+            latLonMap[asset.id] = latLon
+        }
+        return latLon
     }
 
     suspend fun writeLatLon(asset: Asset, lat: Double, lon: Double): Boolean =
         exifPlatform.writeLatLon(asset, lat, lon).also { success ->
             if (success) {
-                cache[asset.id] = lat to lon
-                nameCache.remove(asset.id)
+                cacheMutex.withLock {
+                    latLonMap[asset.id] = lat to lon
+                }
             }
         }
 
-    suspend fun getLocationName(asset: Asset, geocoder: GeocoderPlatform): String {
-        nameCache[asset.id]?.let { return it }
-        val pair = getLatLon(asset) ?: return "No Location Data"
-        val name = geocoder.reverseGeocode(pair.first, pair.second) ?: "Location Unknown"
-        nameCache[asset.id] = name
+    suspend fun getLocationName(asset: Asset, geocoder: GeocoderPlatform): String? {
+        val latLon = getLatLon(asset) ?: return null
+        return getLocationName(latLon.first, latLon.second, geocoder)
+    }
+
+    /**
+     * Geocodes once per ~100 m cell, because platform geocoders (especially CLGeocoder) are rate limited.
+     * Failed lookups are not cached so they can be retried later.
+     */
+    suspend fun getLocationName(lat: Double, lon: Double, geocoder: GeocoderPlatform): String? {
+        val key = (lat * 1_000).roundToLong() to (lon * 1_000).roundToLong()
+        cacheMutex.withLock {
+            placeNameMap[key]?.let { return it }
+        }
+        val name = geocoder.reverseGeocode(lat, lon) ?: return null
+        cacheMutex.withLock {
+            placeNameMap[key] = name
+        }
         return name
     }
 }

@@ -4,14 +4,18 @@ import android.app.RecoverableSecurityException
 import android.content.ContentResolver
 import android.content.ContentUris
 import android.content.Context
+import android.content.Intent
+import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
+import android.os.Process
 import android.provider.MediaStore
 import androidx.core.net.toUri
 import androidx.exifinterface.media.ExifInterface
 import com.redred.mapmyshots.AndroidDeleteCoordinator
 import com.redred.mapmyshots.model.Asset
+import kotlinx.coroutines.CancellationException
 import kotlin.time.ExperimentalTime
 import kotlin.time.Instant
 
@@ -114,41 +118,6 @@ class AndroidPhotoRepository(private val context: Context): PhotoRepository {
     }
 
     @OptIn(ExperimentalTime::class)
-    override suspend fun listAllImages(limitPerAlbum: Int): List<Asset> {
-        val baseUri = imagesUri()
-        val projection = arrayOf(
-            MediaStore.Images.Media._ID,
-            MediaStore.Images.Media.DISPLAY_NAME,
-            MediaStore.Images.Media.DATE_TAKEN,
-            MediaStore.Images.Media.DATE_ADDED,
-            MediaStore.MediaColumns.SIZE
-        )
-        val selection = "${MediaStore.MediaColumns.SIZE} > 0"
-        val sort = "${MediaStore.Images.Media.DATE_TAKEN} DESC, ${MediaStore.Images.Media.DATE_ADDED} DESC"
-
-        context.contentResolver.query(baseUri, projection, selection, null, sort)?.use { c ->
-            val idCol = c.getColumnIndexOrThrow(MediaStore.Images.Media._ID)
-            val nameCol = c.getColumnIndexOrThrow(MediaStore.Images.Media.DISPLAY_NAME)
-            val takenCol = c.getColumnIndexOrThrow(MediaStore.Images.Media.DATE_TAKEN)
-            val addedCol = c.getColumnIndexOrThrow(MediaStore.Images.Media.DATE_ADDED)
-
-            val out = mutableListOf<Asset>()
-
-            while (c.moveToNext() && (limitPerAlbum <= 0 || out.size < limitPerAlbum)) {
-                out += c.toAsset(
-                    idCol = idCol,
-                    nameCol = nameCol,
-                    takenCol = takenCol,
-                    addedCol = addedCol,
-                    baseUri = baseUri
-                )
-            }
-            return out
-        }
-        return emptyList()
-    }
-
-    @OptIn(ExperimentalTime::class)
     override suspend fun listImagesBetween(min: Instant, max: Instant): List<Asset> {
         val projection = arrayOf(
             MediaStore.Images.Media._ID,
@@ -192,7 +161,7 @@ class AndroidPhotoRepository(private val context: Context): PhotoRepository {
             context.contentResolver.delete(uri, null, null) > 0
         } catch (error: RecoverableSecurityException) {
             if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) return false
-            val granted = AndroidDeleteCoordinator.requestDeletePermission(
+            val granted = AndroidDeleteCoordinator.requestUserConsent(
                 error.userAction.actionIntent.intentSender
             )
             if (!granted) return false
@@ -222,6 +191,37 @@ class AndroidExifPlatform(private val context: Context): ExifPlatform {
 
     override suspend fun writeLatLon(asset: Asset, lat: Double, lon: Double): Boolean {
         val uri = asset.uri.toUri()
+        return try {
+            if (!ensureWriteAccess(uri)) return false
+            writeExif(uri, lat, lon)
+        } catch (error: RecoverableSecurityException) {
+            // Android 10: photos of other apps need an explicit user consent before writing.
+            val granted = AndroidDeleteCoordinator.requestUserConsent(
+                error.userAction.actionIntent.intentSender
+            )
+            granted && runCatching { writeExif(uri, lat, lon) }.getOrDefault(false)
+        } catch (error: CancellationException) {
+            throw error
+        } catch (_: Exception) {
+            false
+        }
+    }
+
+    /** Android 11+: asks the user for write access to photos this app does not own. */
+    private suspend fun ensureWriteAccess(uri: Uri): Boolean {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.R) return true
+        val permission = context.checkUriPermission(
+            uri,
+            Process.myPid(),
+            Process.myUid(),
+            Intent.FLAG_GRANT_WRITE_URI_PERMISSION
+        )
+        if (permission == PackageManager.PERMISSION_GRANTED) return true
+        val request = MediaStore.createWriteRequest(context.contentResolver, listOf(uri))
+        return AndroidDeleteCoordinator.requestUserConsent(request.intentSender)
+    }
+
+    private fun writeExif(uri: Uri, lat: Double, lon: Double): Boolean {
         context.contentResolver.openFileDescriptor(uri, "rw")?.use { pfd ->
             val exif = ExifInterface(pfd.fileDescriptor)
             exif.setLatLong(lat, lon)

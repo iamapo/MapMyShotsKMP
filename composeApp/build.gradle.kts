@@ -6,6 +6,7 @@ plugins {
     alias(libs.plugins.androidApplication)
     alias(libs.plugins.composeMultiplatform)
     alias(libs.plugins.composeCompiler)
+    alias(libs.plugins.kover)
 }
 
 kotlin {
@@ -44,6 +45,7 @@ kotlin {
             implementation(libs.ui.tooling.preview)
             implementation(libs.androidx.lifecycle.viewmodelCompose)
             implementation(libs.androidx.lifecycle.runtimeCompose)
+            implementation(libs.androidx.navigation.compose)
             implementation(libs.kotlinx.datetime)
             implementation(libs.koin.core)
             implementation(libs.koin.compose)
@@ -102,4 +104,32 @@ android {
 
 dependencies {
     debugImplementation(libs.ui.tooling)
+}
+
+// Coverage for the shared logic layer: ./gradlew :composeApp:koverHtmlReport
+// UI, DI, generated resources and platform code are excluded; they are verified on devices.
+kover {
+    reports {
+        filters {
+            excludes {
+                packages(
+                    "com.redred.mapmyshots.ui",
+                    "com.redred.mapmyshots.di",
+                    "mapmyshots.composeapp.generated.resources"
+                )
+                classes(
+                    "com.redred.mapmyshots.AppKt*",
+                    "com.redred.mapmyshots.MainKt*",
+                    "com.redred.mapmyshots.ComposableSingletons*",
+                    "com.redred.mapmyshots.MainActivity*",
+                    "com.redred.mapmyshots.AndroidDeleteCoordinator*",
+                    "com.redred.mapmyshots.platform.Android*",
+                    "com.redred.mapmyshots.platform.Desktop*",
+                    "com.redred.mapmyshots.platform.JpegGpsReader*",
+                    "com.redred.mapmyshots.platform.Platform*"
+                )
+                annotatedBy("androidx.compose.runtime.Composable")
+            }
+        }
+    }
 }

@@ -1,7 +1,6 @@
 package com.redred.mapmyshots.ui
 
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -21,7 +20,9 @@ import com.redred.mapmyshots.viewmodel.PhotoDetailsViewModel
 import mapmyshots.composeapp.generated.resources.Res
 import mapmyshots.composeapp.generated.resources.apply_location_failed
 import mapmyshots.composeapp.generated.resources.delete_failed
-import org.koin.compose.koinInject
+import mapmyshots.composeapp.generated.resources.unknown_location
+import androidx.lifecycle.viewmodel.compose.viewModel
+import org.koin.compose.getKoin
 import org.koin.core.parameter.parametersOf
 import org.jetbrains.compose.resources.stringResource
 
@@ -34,11 +35,9 @@ fun PhotoDetailsScreen(
     onToggleIgnored: (Asset, Boolean) -> Unit,
     onBack: () -> Unit
 ) {
-    val vm: PhotoDetailsViewModel = koinInject(parameters = { parametersOf(photo) })
-
-    DisposableEffect(vm) {
-        onDispose { vm.clear() }
-    }
+    val koin = getKoin()
+    // Scoped to the navigation back stack entry: survives rotation, cleared when the screen is popped.
+    val vm = viewModel { koin.get<PhotoDetailsViewModel> { parametersOf(photo) } }
 
     val uiState by vm.uiState.collectAsState()
     val names = uiState.locationNames
@@ -52,6 +51,7 @@ fun PhotoDetailsScreen(
     var currentLocationName by remember(photo.id) { mutableStateOf<String?>(null) }
     var showApplySuccess by remember(photo.id) { mutableStateOf(false) }
     var appliedSuggestionId by remember(photo.id) { mutableStateOf<String?>(null) }
+    val unknownLocation = stringResource(Res.string.unknown_location)
 
     LaunchedEffect(photo.id) {
         vm.onIntent(PhotoDetailsIntent.LoadSimilar)
@@ -65,7 +65,7 @@ fun PhotoDetailsScreen(
                     hasLocation = true
                     showApplySuccess = true
                     appliedSuggestionId = source?.id
-                    currentLocationName = event.locationName
+                    currentLocationName = event.locationName ?: unknownLocation
                     applyingFrom = null
                     onLocationApplied()
                 }
@@ -144,8 +144,7 @@ fun PhotoDetailsScreen(
         )
     }
 
-    if (pendingApplyFrom != null) {
-        val src = pendingApplyFrom!!
+    pendingApplyFrom?.let { src ->
         ApplyLocationDialog(
             sourceName = names[src.id].orEmpty().ifBlank { src.displayName ?: src.id },
             onDismiss = { pendingApplyFrom = null },

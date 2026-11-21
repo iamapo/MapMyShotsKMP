@@ -3,10 +3,14 @@ package com.redred.mapmyshots.viewmodel
 import com.redred.mapmyshots.model.Asset
 import com.redred.mapmyshots.service.IgnoredPhotoService
 import com.redred.mapmyshots.service.PhotoService
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
@@ -15,6 +19,8 @@ import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 
 data class LoadProgress(
     val scanned: Int = 0,
@@ -52,6 +58,7 @@ sealed interface PhotoListIntent {
     data class Ignore(val asset: Asset) : PhotoListIntent
     data class Restore(val assetId: String) : PhotoListIntent
     data class RemoveFromList(val assetId: String) : PhotoListIntent
+    data class AssetDeleted(val assetId: String) : PhotoListIntent
 }
 
 sealed interface PhotoListEvent {
@@ -61,10 +68,12 @@ sealed interface PhotoListEvent {
 
 class PhotoListViewModel(
     private val service: PhotoService,
-    private val ignoredPhotoService: IgnoredPhotoService
-) {
-    private val job = SupervisorJob()
-    private val scope = CoroutineScope(Dispatchers.Default + job)
+    private val ignoredPhotoService: IgnoredPhotoService,
+    scope: CoroutineScope = CoroutineScope(Dispatchers.Default + SupervisorJob())
+) : ViewModel(scope) {
+    // Serializes chunk loading and every mutation of the paging/id bookkeeping below.
+    private val loadMutex = Mutex()
+    private var loadJob: Job? = null
 
     private val _uiState = MutableStateFlow(PhotoListUiState())
     val uiState: StateFlow<PhotoListUiState> = _uiState.asStateFlow()
@@ -84,8 +93,6 @@ class PhotoListViewModel(
     private var ignoredIds: Set<String> = emptySet()
     private val knownPhotoIds = linkedSetOf<String>()
 
-    fun clear() = job.cancel()
-
     fun onIntent(intent: PhotoListIntent) {
         when (intent) {
             PhotoListIntent.LoadFirstPage -> loadFirstPage()
@@ -94,22 +101,26 @@ class PhotoListViewModel(
             is PhotoListIntent.Delete -> delete(intent.asset)
             is PhotoListIntent.Ignore -> ignore(intent.asset)
             is PhotoListIntent.Restore -> restore(intent.assetId)
-            is PhotoListIntent.RemoveFromList -> removeFromList(intent.assetId, clearIgnored = true)
+            is PhotoListIntent.RemoveFromList -> removeFromList(intent.assetId, deleted = false)
+            is PhotoListIntent.AssetDeleted -> removeFromList(intent.assetId, deleted = true)
         }
     }
 
     fun loadFirstPage() {
         if (initialized) return
         initialized = true
-        candidateOffset = 0
-        endReached = false
-        scannedTotal = 0
-        foundTotal = 0
-        knownPhotoIds.clear()
-        _uiState.update { it.copy(reviewPhotos = emptyList(), ignoredPhotos = emptyList()) }
-
-        scope.launch {
-            loadIgnoredPhotos()
+        val previousJob = loadJob
+        loadJob = viewModelScope.launch {
+            previousJob?.cancelAndJoin()
+            loadMutex.withLock {
+                candidateOffset = 0
+                endReached = false
+                scannedTotal = 0
+                foundTotal = 0
+                knownPhotoIds.clear()
+                _uiState.update { it.copy(reviewPhotos = emptyList(), ignoredPhotos = emptyList()) }
+                loadIgnoredPhotos()
+            }
 
             var first = true
             while (!endReached && _uiState.value.reviewPhotos.size < minInitialHits) {
@@ -135,7 +146,17 @@ class PhotoListViewModel(
         }
     }
 
-    private suspend fun loadChunk(reset: Boolean): Boolean {
+    /** Restarts the scan, e.g. after the photo permission was granted. */
+    fun reload() {
+        initialized = false
+        loadFirstPage()
+    }
+
+    private suspend fun loadChunk(reset: Boolean): Boolean = loadMutex.withLock {
+        loadChunkLocked(reset)
+    }
+
+    private suspend fun loadChunkLocked(reset: Boolean): Boolean {
         _uiState.update { state ->
             state.copy(
                 isLoading = if (reset) true else state.isLoading,
@@ -206,8 +227,8 @@ class PhotoListViewModel(
 
     fun loadNextPage() {
         if (_uiState.value.selectedTab != PhotoListTab.Review) return
-        if (_uiState.value.isLoadingMore || _uiState.value.isLoading || endReached) return
-        scope.launch { loadChunk(reset = false) }
+        if (loadMutex.isLocked || endReached) return
+        viewModelScope.launch { loadChunk(reset = false) }
     }
 
     fun selectTab(tab: PhotoListTab) {
@@ -216,10 +237,10 @@ class PhotoListViewModel(
     }
 
     fun delete(asset: Asset) {
-        scope.launch {
+        viewModelScope.launch {
             val ok = service.deleteAsset(asset)
             if (ok) {
-                removeFromList(asset.id, clearIgnored = true)
+                removeFromList(asset.id, deleted = true)
             } else {
                 _events.tryEmit(PhotoListEvent.DeleteFailed)
             }
@@ -227,15 +248,17 @@ class PhotoListViewModel(
     }
 
     fun ignore(asset: Asset) {
-        scope.launch {
+        viewModelScope.launch {
             ignoredPhotoService.ignore(asset.id)
-            ignoredIds = ignoredIds + asset.id
-            _uiState.update { state ->
-                val remaining = state.reviewPhotos.filterNot { it.id == asset.id }
-                val ignored = (state.ignoredPhotos + asset)
-                    .distinctBy { it.id }
-                    .sortedByDescending { it.takenAt.toEpochMilliseconds() }
-                state.copy(reviewPhotos = remaining, ignoredPhotos = ignored)
+            loadMutex.withLock {
+                ignoredIds = ignoredIds + asset.id
+                _uiState.update { state ->
+                    val remaining = state.reviewPhotos.filterNot { it.id == asset.id }
+                    val ignored = (state.ignoredPhotos + asset)
+                        .distinctBy { it.id }
+                        .sortedByDescending { it.takenAt.toEpochMilliseconds() }
+                    state.copy(reviewPhotos = remaining, ignoredPhotos = ignored)
+                }
             }
 
             while (!endReached && _uiState.value.reviewPhotos.size < minInitialHits) {
@@ -246,9 +269,11 @@ class PhotoListViewModel(
     }
 
     fun restore(assetId: String) {
-        scope.launch {
+        viewModelScope.launch {
             ignoredPhotoService.restore(assetId)
-            ignoredIds = ignoredIds - assetId
+            loadMutex.withLock {
+                ignoredIds = ignoredIds - assetId
+            }
             _uiState.update { state ->
                 val restored = state.ignoredPhotos.firstOrNull { it.id == assetId }
                 val review = if (restored != null) {
@@ -268,21 +293,32 @@ class PhotoListViewModel(
         }
     }
 
-    private fun removeFromList(assetId: String, clearIgnored: Boolean) {
-        scope.launch {
-            if (clearIgnored && assetId in ignoredIds) {
-                ignoredPhotoService.clear(assetId)
-                ignoredIds = ignoredIds - assetId
+    private fun removeFromList(assetId: String, deleted: Boolean) {
+        viewModelScope.launch {
+            loadMutex.withLock {
+                removeFromListLocked(assetId, deleted)
             }
-            knownPhotoIds.remove(assetId)
-            _uiState.update { state ->
-                val ignored = state.ignoredPhotos.filterNot { it.id == assetId }
-                state.copy(
-                    reviewPhotos = state.reviewPhotos.filterNot { it.id == assetId },
-                    ignoredPhotos = ignored,
-                    selectedTab = if (ignored.isEmpty()) PhotoListTab.Review else state.selectedTab
-                )
-            }
+        }
+    }
+
+    private suspend fun removeFromListLocked(assetId: String, deleted: Boolean) {
+        if (assetId in ignoredIds) {
+            ignoredPhotoService.restore(assetId)
+            ignoredIds = ignoredIds - assetId
+        }
+        knownPhotoIds.remove(assetId)
+        // A deleted photo from the already scanned range shifts all later offsets by one.
+        // shortcut: deleted ignored photos are not counted, so one photo may be skipped; fix with id-based paging.
+        if (deleted && _uiState.value.reviewPhotos.any { it.id == assetId }) {
+            candidateOffset = (candidateOffset - 1).coerceAtLeast(0)
+        }
+        _uiState.update { state ->
+            val ignored = state.ignoredPhotos.filterNot { it.id == assetId }
+            state.copy(
+                reviewPhotos = state.reviewPhotos.filterNot { it.id == assetId },
+                ignoredPhotos = ignored,
+                selectedTab = if (ignored.isEmpty()) PhotoListTab.Review else state.selectedTab
+            )
         }
     }
 }
